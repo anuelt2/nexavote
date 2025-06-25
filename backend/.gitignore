@@ -1,0 +1,6 @@
+.venv/
+__pycache__/
+*.sw[po]
+*.py[codwz]
+.env
+staticfiles/

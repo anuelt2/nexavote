@@ -1,0 +1,34 @@
+services:
+  web:
+    build: .
+    container_name: nexavote_web  # Explicit container name
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    env_file:
+      - .env
+    networks:
+      - nexavote_network
+
+  db:
+    image: postgres:15
+    container_name: nexavote_db # Explicit container name
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    environment:
+      - POSTGRES_DB=nexavote_db
+      - POSTGRES_USER=nexavote_user
+      - POSTGRES_PASSWORD=nexavotepass
+    networks:
+      - nexavote_network
+
+volumes:
+  postgres_data:
+
+networks:
+  nexavote_network: # Explicit network name
+    name: nexavote_network
