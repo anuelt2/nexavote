@@ -61,8 +61,8 @@ docker compose -p nexavote -f docker-compose.yml up --build -d
 ### 4. Run Migrations
 
 ```bash
-docker compose -p nexavote -f docker-compose.yml exec nexavote_web python manage.py makemigrations
-docker compose -p nexavote -f docker-compose.yml exec nexavote_web python manage.py migrate
+docker compose -p nexavote -f docker-compose.yml exec web python manage.py makemigrations
+docker compose -p nexavote -f docker-compose.yml exec web python manage.py migrate
 ```
 
 ---
@@ -70,7 +70,7 @@ docker compose -p nexavote -f docker-compose.yml exec nexavote_web python manage
 ### 5. Create Superuser
 
 ```bash
-docker compose -p nexavote -f docker-compose.yml exec nexavote_web python manage.py createsuperuser
+docker compose -p nexavote -f docker-compose.yml exec web python manage.py createsuperuser
 ```
 
 ---
@@ -88,7 +88,8 @@ Visit: [http://localhost:8000](http://localhost:8000)
 | Build & Run        | `docker compose -p nexavote up --build -d`                            |
 | Stop & Clean Up    | `docker compose -p nexavote down -v --remove-orphans`                 |
 | View Logs          | `docker compose -p nexavote logs -f`                                  |
-| Run Admin Commands | `docker compose -p nexavote exec nexavote_web python manage.py <cmd>` |
+| List service names | `docker compose config --services`                                  |
+| Run Admin Commands | `docker compose -p nexavote exec web python manage.py <cmd>` |
 
 ---
 
