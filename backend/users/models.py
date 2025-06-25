@@ -1,15 +1,26 @@
+"""
+users/models.py
+
+This module defines a custom User model that uses email as the unique
+identifier for authentication instead of the default username. It also
+provides a custom UserManager with methods to create regular users and
+superusers.
+
+The model extends Django's AbstractUser.
+"""
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.db import models
-from django.utils import timezone
 
 from core.models import BaseUUIDModel
 
 
 class UserManager(BaseUserManager):
     """
+    Custom manager for the custom User model with email as unique identifier.
     """
     def create_user(self, email, password=None, **extra_fields):
         """
+        Creates and saves a regular user with the given email and password.
         """
         if not email:
             raise ValueError('Email field must be set')
@@ -21,6 +32,7 @@ class UserManager(BaseUserManager):
 
     def create_superuser(self, email, password=None, **extra_fields):
         """
+        Creates and saves a superuser with the given email and password.
         """
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
@@ -39,6 +51,8 @@ class UserManager(BaseUserManager):
 
 class User(AbstractUser, BaseUUIDModel):
     """
+    Custom User model extending from AbstractUser that uses email as the
+    unique identifier instead of username.
     """
     ROLE_CHOICES = [
             ('voter', 'Voter'),
@@ -57,7 +71,6 @@ class User(AbstractUser, BaseUUIDModel):
             )
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
-    date_joined = models.DateTimeField(default=timezone.now)
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = []
@@ -66,13 +79,14 @@ class User(AbstractUser, BaseUUIDModel):
 
     def __str__(self):
         """
+        Return string representation with user email.
         """
         return self.email
 
 
 class VoterProfile(BaseUUIDModel):
     """
-    Voter profile model linking a user with a unique UUID voter ID.
+    VoterProfile model linking a user with a unique UUID voter ID.
     """
     user = models.OneToOneField(
             'users.User',
@@ -82,6 +96,6 @@ class VoterProfile(BaseUUIDModel):
 
     def __str__(self):
         """
-        Return string representaiton with user email and voter ID.
+        Return string representation with user email and voter ID.
         """
         return f'{self.user.email} - Voter ID: {self.id}'
