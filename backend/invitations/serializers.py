@@ -3,15 +3,20 @@
 from rest_framework import serializers
 
 from invitations.models import Invitation
+from election_events.models import ElectionEvent
 
 
 class InvitationCreateSerializer(serializers.ModelSerializer):
     """
     Serializer for Invitation model.
     """
+    election_event = serializers.PrimaryKeyRelatedField(
+        queryset=ElectionEvent.objects.all()
+    )
+
     class Meta:
         model = Invitation
-        fields = ['email']
+        fields = ['email', 'election_event']
     
     def validate_email(self, value):
         """

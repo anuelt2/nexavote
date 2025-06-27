@@ -4,7 +4,7 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model
 
 from invitations.models import Invitation
-from users.models import VoterProfile
+from users.models import User, VoterProfile
 
 User = get_user_model()
 
@@ -12,13 +12,14 @@ User = get_user_model()
 class RegisterViaTokenSerializer(serializers.Serializer):
     """
     """
-    token = serializers.UUIDField()
-    first_name = serializers.CharField()
-    last_name = serializers.CharField()
+    invitation = serializers.UUIDField()
+    first_name = serializers.CharField(max_length=50)
+    last_name = serializers.CharField(max_length=50)
     password = serializers.CharField(write_only=True)
 
     def validate_token(self, value):
         """
+        Checks that invitation token is valid and unused.
         """
         try:
             invitation = Invitation.objects.get(token=value, is_used=False)
@@ -29,7 +30,7 @@ class RegisterViaTokenSerializer(serializers.Serializer):
     def create(self, validated_data):
         """
         """
-        invitation = validated_data['token']
+        invitation = validated_data['invitation']
         password = validated_data['password']
         first_name = validated_data['first_name']
         last_name = validated_data['last_name']
@@ -42,7 +43,10 @@ class RegisterViaTokenSerializer(serializers.Serializer):
                 role='voter'
                 )
 
-        VoterProfile.objects.create(user=user)
+        VoterProfile.objects.create(
+            user=user,
+            election_event=invitation.election_event
+        )
 
         invitation.is_used = True
         invitation.save()
