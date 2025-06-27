@@ -11,6 +11,7 @@ import uuid
 from django.db import models
 
 from core.models import BaseUUIDModel
+from election_events.models import ElectionEvent
 
 
 class Invitation(BaseUUIDModel):
@@ -20,6 +21,11 @@ class Invitation(BaseUUIDModel):
     email = models.EmailField(unique=True)
     token = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     is_used = models.BooleanField(default=False)
+    election_event = models.ForeignKey(
+        ElectionEvent,
+        on_delete=models.CASCADE,
+        related_name='invitations'
+    )
 
     def __str__(self):
         """
