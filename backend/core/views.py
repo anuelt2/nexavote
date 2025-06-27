@@ -1,3 +1,25 @@
-from django.shortcuts import render
+"""
+"""
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from rest_framework.reverse import reverse
 
-# Create your views here.
+
+@api_view(["GET"])
+def api_root(request, format=None):
+    """
+    API Root View
+
+    Welcome to NexaVote Electronic Voting Platform
+    """
+    return Response({
+        # Admin
+        "admin":    reverse("admin:index", request=request, format=format),
+        "home":     reverse("home", request=request, format=format),
+
+        # Users app endpoints
+        "register": reverse("register-via-token", request=request, format=format),
+        
+        # Invitations
+        "invitations":  reverse("invitation-create", request=request, format=format),
+    })
