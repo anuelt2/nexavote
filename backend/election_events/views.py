@@ -1,3 +1,13 @@
-from django.shortcuts import render
+"""
+"""
+from rest_framework import generics
 
-# Create your views here.
+from election_events.models import ElectionEvent
+from election_events.serializers import ElectionEventSerializer
+
+
+class ElectionEventListView(generics.ListAPIView):
+    """
+    """
+    queryset = ElectionEvent.objects.all()
+    serializer_class = ElectionEventSerializer
