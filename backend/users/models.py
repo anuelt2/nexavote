@@ -12,6 +12,7 @@ from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.db import models
 
 from core.models import BaseUUIDModel
+from election_events.models import ElectionEvent
 
 
 class UserManager(BaseUserManager):
@@ -93,6 +94,11 @@ class VoterProfile(BaseUUIDModel):
             on_delete=models.CASCADE,
             related_name='voterprofile',
             )
+    election_event = models.ForeignKey(
+        ElectionEvent,
+        on_delete=models.CASCADE,
+        related_name='voter_profiles'
+    )
 
     def __str__(self):
         """
