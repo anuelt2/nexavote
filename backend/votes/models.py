@@ -11,46 +11,55 @@ from django.db import models
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 from core.models import BaseUUIDModel
-from elections.models import Election
+from elections.models import Election, Candidate
 from users.models import VoterProfile
 
 
 class Vote(BaseUUIDModel):
     """
-    Vote model representing a vote cast by a voter in a specific election.
+    Vote model representing a vote cast by a voter for a candidate.
     
     This model ensures:
-    - One vote per voter per election
+    - One vote per voter per election (derived from candidate.election)
     - Vote integrity and auditability
     - Voter anonymity (no direct link to specific voter choice)
     """
 
-    election = models.ForeignKey(
-        Election,
-        on_delete=models.CASCADE,
-        related_name='votes'
-    )
     voter = models.ForeignKey(
         VoterProfile,
         on_delete=models.CASCADE,
         related_name='votes'
     )
-    vote_choice = models.TextField()
-    date_and_time = models.DateTimeField(auto_now_add=True)
-    encrypted_vote = models.TextField(blank=True, null=True) #Encrypts vote_choise for additional security
+    candidate = models.ForeignKey(
+        Candidate,
+        on_delete=models.CASCADE,
+        related_name='votes'
+    )
+    encrypted_vote = models.TextField(blank=True, null=True)  # Encrypts vote_choice for additional security
     vote_hash = models.CharField(max_length=64, blank=True)
     is_verified = models.BooleanField(default=True)
 
+    @property
+    def election(self):
+        """
+        Get the election from the candidate.
+        """
+        return self.candidate.election
     
     class Meta:
         """
         Ensures one vote per voter per election
         """
-        unique_together = ['election', 'voter']
-        ordering = ['date_and_time']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['candidate__election', 'voter'],
+                name='unique_vote_per_voter_per_election'
+            )
+        ]
+        ordering = ['created_at']
         indexes = [
-            models.Index(fields=['election', 'date_and_time']),
-            models.Index(fields=['voter', 'date_and_time']),
+            models.Index(fields=['candidate', 'created_at']),
+            models.Index(fields=['voter', 'created_at']),
         ]
     
     def clean(self):
@@ -100,14 +109,14 @@ class Vote(BaseUUIDModel):
         """
         import hashlib
         
-        vote_data = f"{self.election.id}{self.voter.id}{self.vote_choice}{timezone.now().isoformat()}"
+        vote_data = f"{self.election.id}{self.voter.id}{self.candidate.id}{timezone.now().isoformat()}"
         return hashlib.sha256(vote_data.encode()).hexdigest()
     
     def __str__(self):
         """
         Return string representation of the vote.
         """
-        return f"Vote by {self.voter.user.email} in {self.election.title}"
+        return f"Vote by {self.voter.user.email} for {self.candidate.name} in {self.election.title}"
     
     @classmethod
     def get_election_results(cls, election):
@@ -118,16 +127,27 @@ class Vote(BaseUUIDModel):
             election: Election instance
             
         Returns:
-            dict: Vote counts by choice
+            dict: Vote counts by candidate
         """
-        votes = cls.objects.filter(election=election, is_verified=True)
-        results = {}
+        from django.db.models import Count
         
-        for vote in votes:
-            choice = vote.vote_choice
-            results[choice] = results.get(choice, 0) + 1
+        results = cls.objects.filter(
+            election=election, 
+            is_verified=True
+        ).values(
+            'candidate__id',
+            'candidate__first_name',
+            'candidate__last_name'
+        ).annotate(
+            vote_count=Count('id')
+        ).order_by('-vote_count')
         
-        return results
+        formatted_results = {}
+        for result in results:
+            candidate_name = f"{result['candidate__first_name']} {result['candidate__last_name']}"
+            formatted_results[candidate_name] = result['vote_count']
+        
+        return formatted_results
     
     @classmethod
     def get_voter_participation(cls, election_event):
@@ -195,13 +215,12 @@ class VoteAuditLog(BaseUUIDModel):
     )
     details = models.TextField(blank=True)
     ip_address = models.GenericIPAddressField(null=True, blank=True)
-    timestamp = models.DateTimeField(auto_now_add=True)
     
     class Meta:
-        ordering = ['-timestamp']
+        ordering = ['-created_at'] 
     
     def __str__(self):
         """
         Return string representation of the audit log entry.
         """
-        return f"{self.action} - Vote {self.vote.id} at {self.timestamp}"
+        return f"{self.action} - Vote {self.vote.id} at {self.created_at}"
