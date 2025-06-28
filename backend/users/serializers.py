@@ -11,8 +11,9 @@ User = get_user_model()
 
 class RegisterViaTokenSerializer(serializers.Serializer):
     """
+    Register user via invitation token.
     """
-    invitation = serializers.UUIDField()
+    token = serializers.UUIDField()
     first_name = serializers.CharField(max_length=50)
     last_name = serializers.CharField(max_length=50)
     password = serializers.CharField(write_only=True)
@@ -30,7 +31,7 @@ class RegisterViaTokenSerializer(serializers.Serializer):
     def create(self, validated_data):
         """
         """
-        invitation = validated_data['invitation']
+        invitation = validated_data['token']
         password = validated_data['password']
         first_name = validated_data['first_name']
         last_name = validated_data['last_name']

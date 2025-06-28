@@ -5,9 +5,9 @@ from users.views import RegisterViaTokenView
 
 
 urlpatterns = [
-        path(
-            'register/',
-            RegisterViaTokenView.as_view(),
-            name='register-via-token'
-            ),
-        ]
+    path(
+        'register/',
+        RegisterViaTokenView.as_view(),
+        name='register-via-token'
+    ),
+]
