@@ -33,11 +33,12 @@ class Election(BaseUUIDModel):
 
     def is_open(self):
         """
+        Check if the election is currently open for voting.
         """
         now = timezone.now()
         return self.is_active and self.start_time <= now <= self.end_time
     
-    def _str__(self):
+    def __str__(self):
         """
         Return string representation with election title and
         election_event title.
@@ -67,6 +68,13 @@ class Candidate(BaseUUIDModel):
         on_delete=models.SET_NULL,
         related_name='candidates'
     )
+
+    @property
+    def name(self):
+        """
+        Return full name of the candidate.
+        """
+        return f"{self.first_name} {self.last_name}"
 
     def __str__(self):
         """
