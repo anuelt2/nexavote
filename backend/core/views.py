@@ -14,12 +14,17 @@ def api_root(request, format=None):
     """
     return Response({
         # Admin
-        "admin":    reverse("admin:index", request=request, format=format),
-        "home":     reverse("home", request=request, format=format),
+        "admin":            reverse("admin:index", request=request, format=format),
+        "home":             reverse("home", request=request, format=format),
 
         # Users app endpoints
-        "register": reverse("register-via-token", request=request, format=format),
+        "register":         reverse("register-via-token", request=request, format=format),
         
         # Invitations
-        "invitations":  reverse("invitation-create", request=request, format=format),
+        "invitations":      reverse("invitation-create", request=request, format=format),
+
+        # Election Events endpoints
+        "election-events":   reverse("election-event-list", request=request, format=format),
+        "elections" :        reverse("election-list", request=request, format=format),
+        "candidates":        reverse("candidate-list", request=request, format=format),
     })
