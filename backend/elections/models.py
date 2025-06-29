@@ -37,7 +37,7 @@ class Election(BaseUUIDModel):
         now = timezone.now()
         return self.is_active and self.start_time <= now <= self.end_time
     
-    def _str__(self):
+    def __str__(self):
         """
         Return string representation with election title and
         election_event title.
@@ -73,4 +73,4 @@ class Candidate(BaseUUIDModel):
         Return string representation with candidate name and
         election contested.
         """
-        return f"{self.name} ({self.election.title})"
+        return f"{self.first_name} {self.last_name} ({self.election.title})"

@@ -1,14 +1,13 @@
 """
 """
-from rest_framework import generics, permissions, status
-from rest_framework.response import Response
+import os
+from rest_framework import generics, permissions
 from django.core.mail import send_mail
-from django.urls import reverse
 from django.conf import settings
+from django.template.loader import render_to_string
 
 from invitations.models import Invitation
 from invitations.serializers import InvitationCreateSerializer
-# from elections.models import Election
 
 
 class InvitationCreateAPIView(generics.CreateAPIView):
@@ -26,17 +25,19 @@ class InvitationCreateAPIView(generics.CreateAPIView):
 
     def send_invite_email(self, invitation):
         """
+        Sends an email to the invited voter with one-time use registration
+        link containing the token using a text template.
         """
-        registration_url = f"http://localhost:8000/register?token={invitation.token}"
-        subject = "You are invited to register for NexaVote Election"     # replace NexaVote with election title
-        message = (
-            f"Hello,\n\n"
-            f"You have been invited to register as a voter in NexaVote Election."   # replace NexaVote with election title
-            f"Please click on the link below to complete your registration:\n\n"
-            f"{registration_url}\n\n"
-            f"If you did not expect this invitation, please ignore this email.\n\n"
-            f"Thanks."
-        )
+        frontend_base_url = getattr(settings, "FRONTEND_URL", "http://localhost:8000")
+        registration_url = f"{frontend_base_url}/register?token={invitation.token}"
+
+        context = {
+            'election_title': invitation.election_event.title,
+            'registration_url': registration_url,
+        }
+        subject = f"You are invited to register for {invitation.election_event.title}"     # replace NexaVote with election title
+        message = render_to_string('emails/invitation_email.txt', context)
+
         send_mail(
             subject,
             message,
