@@ -9,7 +9,7 @@ app_name = 'votes'
 
 urlpatterns = [
     # Vote casting
-    path('cast/', views.CastVoteView.as_view(), name='cast-vote'),
+    path('', views.CastVoteView.as_view(), name='cast-vote'),
     
     # Vote management
     path('my-votes/', views.VoterVotesListView.as_view(), name='my-votes'),
