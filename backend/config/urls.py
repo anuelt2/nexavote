@@ -14,6 +14,7 @@ from core.views import api_root
 from election_events.views import ElectionEventListView
 from elections.views import Election, Candidate
 
+
 urlpatterns = [
     # Admin Interface
     path('admin/', admin.site.urls),
