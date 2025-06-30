@@ -26,7 +26,7 @@ urlpatterns = [
     path('api/users/', include('users.urls')),
     path('api/invitations/', include('invitations.urls')),
 
-    # Election Events Endpoints
-    path('api/election-events', include('election_events.urls')),
+    # Election Events API Endpoints
+    path('api/election-events/', include('election_events.urls')),
     path('api/', include('elections.urls')),
 ]

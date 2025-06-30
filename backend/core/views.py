@@ -17,14 +17,22 @@ def api_root(request, format=None):
         "admin":            reverse("admin:index", request=request, format=format),
         "home":             reverse("home", request=request, format=format),
 
-        # Users app endpoints
+        # Users
         "register":         reverse("register-via-token", request=request, format=format),
         
         # Invitations
         "invitations":      reverse("invitation-create", request=request, format=format),
 
-        # Election Events endpoints
+        # Election Events
         "election-events":   reverse("election-event-list", request=request, format=format),
+
+        # Elections (public)
         "elections" :        reverse("election-list", request=request, format=format),
         "candidates":        reverse("candidate-list", request=request, format=format),
+
+        # Elections (admin)
+        "election-admin-create":    reverse("election-admin-create", request=request, format=format),
+        "candidate-admin_create":   reverse("candidate-admin-create", request=request, format=format),
+        "election-admin-detail":    "<use /elections/admin/<uuid>/>",
+        "candidate-admin-detail":   "<use /candidates/admin/<uuid>/>",
     })
