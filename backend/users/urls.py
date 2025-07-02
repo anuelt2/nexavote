@@ -1,7 +1,7 @@
 """
 """
 from django.urls import path
-from users.views import RegisterViaTokenView
+from users.views import RegisterViaTokenView, AdminStaffRegistrationView
 
 
 urlpatterns = [
