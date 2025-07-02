@@ -30,6 +30,12 @@ def api_root(request, format=None):
         "elections" :        reverse("election-list", request=request, format=format),
         "candidates":        reverse("candidate-list", request=request, format=format),
 
+        # Votes endpoints
+        "cast-vote":         reverse("votes:cast-vote", request=request, format=format),
+        "my-votes":          reverse("votes:my-votes", request=request, format=format),
+        "verify-vote":       reverse("votes:verify-vote", request=request, format=format),
+        "audit-logs":        reverse("votes:audit-logs", request=request, format=format),
+
         # Elections (admin)
         "election-admin-create":    reverse("election-admin-create", request=request, format=format),
         "candidate-admin_create":   reverse("candidate-admin-create", request=request, format=format),
