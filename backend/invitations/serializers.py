@@ -18,6 +18,15 @@ class InvitationCreateSerializer(serializers.ModelSerializer):
         model = Invitation
         fields = ['email', 'election_event']
     
+    def validate(self, data):
+        """
+        Validation for election_event is_active status
+        """
+        event = data.get('election_event')
+        if not event.is_active:
+            raise serializers.ValidationError("The selected election event is not active")
+        return data
+    
     def validate_email(self, value):
         """
         Custom validation for Invitation email field
