@@ -4,7 +4,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, permissions
 
-from users.serializers import RegisterViaTokenSerializer
+from users.serializers import RegisterViaTokenSerializer, AdminStaffRegistrationSerializer
 
 
 class RegisterViaTokenView(APIView):
