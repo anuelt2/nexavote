@@ -206,7 +206,7 @@ def verify_vote(request):
             return Response({
                 'verified': True,
                 'vote_id': vote.id,
-                'election_title': vote.election.title,
+                'election_title': vote.candidate.election.title,
                 'candidate_name': f"{vote.candidate.first_name} {vote.candidate.last_name}",
                 'created_at': vote.created_at,
                 'is_verified': vote.is_verified
