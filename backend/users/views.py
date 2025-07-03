@@ -1,10 +1,19 @@
 """
 """
+from django.contrib.auth import get_user_model, login, logout
+from django.shortcuts import render, redirect
+from django.views import View
+from django.contrib.auth.forms import UserCreationForm
+
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, permissions
 
 from users.serializers import RegisterViaTokenSerializer, AdminStaffRegistrationSerializer
+from invitations.models import Invitation
+from users.forms import VoterRegistrationForm
+
+User = get_user_model()
 
 
 class RegisterViaTokenView(APIView):
@@ -63,4 +72,50 @@ class AdminStaffRegistrationView(APIView):
         return Response(
             serializer.errors,
             status=status.HTTP_400_BAD_REQUEST
-        )                
+        )
+
+
+class LogoutAnyMethodView(View):
+    """
+    """
+    def dispatch(self, request, *args, **kwargs):
+        logout(request)
+        return redirect('home')
+
+
+class RegisterViaTokenHTMLView(View):
+    """
+    """
+    def get(self, request):
+        """
+        """
+        token = request.GET.get("token")
+        try:
+            invitation = Invitation.objects.get(token=token, is_used=False)
+        except Invitation.DoesNotExist:
+            return render(request, "users/register_voter.html", {"invalid_token": True})
+        
+        form = VoterRegistrationForm(initial={"email": invitation.email})
+        return render(request, "users/register_voter.html", {"form": form})
+    
+    def post(self, request):
+        """
+        """
+        token = request.GET.get("token")
+        try:
+            invitation = Invitation.objects.get(token=token, is_used=False)
+        except Invitation.DoesNotExist:
+            return render(request, "users/register_voter.html", {"invalid_token": True})
+        
+        form = VoterRegistrationForm(request.POST, initial={"email": invitation.email})
+        if form.is_valid():
+            user = form.save(commit=False)
+            user.email = invitation.email
+            user.is_voter = True
+            user.save()
+            invitation.is_used = True
+            invitation.save()
+            login(request, user)
+            return redirect("home")
+        
+        return render(request, "users/register_voter.html", {"form": form})

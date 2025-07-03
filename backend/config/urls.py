@@ -19,11 +19,14 @@ urlpatterns = [
     # Admin Interface
     path('admin/', admin.site.urls),
 
+    # API login/logout
+    path('api-auth/', include('rest_framework.urls')),
+
     # API Root
     path('api/', api_root, name='api-root'),
 
     # User API Endpoints
-    path('api/users/', include('users.urls')),
+    # path('api/users/', include('users.urls')),
     path('api/invitations/', include('invitations.urls')),
 
     #Vote API
@@ -35,4 +38,5 @@ urlpatterns = [
 
     # HTML UI (Templates)
     path('', HomeView.as_view(), name='home'),
+    path('auth/', include('users.urls')),
 ]

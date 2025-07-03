@@ -23,13 +23,16 @@ class InvitationCreateAPIView(generics.CreateAPIView):
         invitation = serializer.save()
         self.send_invite_email(invitation)
 
-    def send_invite_email(self, invitation):
+    def send_invite_email(self, invitation, use_api=False):
         """
         Sends an email to the invited voter with one-time use registration
         link containing the token using a text template.
         """
-        frontend_base_url = getattr(settings, "FRONTEND_URL", "http://localhost:8000")
-        registration_url = f"{frontend_base_url}/register?token={invitation.token}"
+        base_url = getattr(settings, "FRONTEND_URL", "http://localhost:8000")
+        if use_api:
+            registration_url = f"{base_url}/api/register/?token={invitation.token}"
+        else:
+            registration_url = f"{base_url}/auth/register/voter/html?token={invitation.token}"
 
         context = {
             'election_title': invitation.election_event.title,

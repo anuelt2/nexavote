@@ -1,0 +1,18 @@
+<!-- register-voter-via-token -->
+ {% extends "base.html" %}
+
+ {% block title %}Voter Registration{% endblock %}
+
+ {% block content %}
+ <h2>Voter Registration</h2>
+
+ {% if invalid_token %}
+ <p style="color: red;"> Invalid or expired invitation token.</p>
+ {% else %}
+ <form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Register</button>
+ </form>
+ {% endif %}
+ {% endblock %}
