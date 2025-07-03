@@ -10,7 +10,7 @@ URL Structures:
 from django.contrib import admin
 from django.urls import path, include
 
-from core.views import api_root
+from core.views import api_root, HomeView
 from election_events.views import ElectionEventListView
 from elections.views import Election, Candidate
 
@@ -20,7 +20,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
 
     # API Root
-    path('', api_root, name='home'),
+    path('api/', api_root, name='api-root'),
 
     # User API Endpoints
     path('api/users/', include('users.urls')),
@@ -32,4 +32,7 @@ urlpatterns = [
     # Election Events API Endpoints
     path('api/election-events/', include('election_events.urls')),
     path('api/', include('elections.urls')),
+
+    # HTML UI (Templates)
+    path('', HomeView.as_view(), name='home'),
 ]

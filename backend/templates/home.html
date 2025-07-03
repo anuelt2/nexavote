@@ -1,0 +1,16 @@
+<!-- home -->
+{% extends "base.html" %}
+
+{% block title %}Home - NexaVote{% endblock %}
+
+{% block content %}
+<h2>Welcome to NexaVote</h2>
+<p>Secure, invite-only online voting system for your organization or event.</p>
+
+{% if user.is_authenticated %}
+<p>You're logged in as <strong>{{ user.email }}</strong>.</p>
+<a href="{% url 'election-list' %}">View Elections</a>
+{% else %}
+<p>Please <a href="{% url 'login' %}">log in</a> to view your elections</p>
+{% endif %}
+{% endblock %}
