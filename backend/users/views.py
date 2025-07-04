@@ -10,6 +10,7 @@ from rest_framework.response import Response
 from rest_framework import status, permissions
 
 from users.serializers import RegisterViaTokenSerializer, AdminStaffRegistrationSerializer
+from users.models import VoterProfile
 from invitations.models import Invitation
 from users.forms import VoterRegistrationForm
 
@@ -89,6 +90,9 @@ class RegisterViaTokenHTMLView(View):
     def get(self, request):
         """
         """
+        if request.user.is_authenticated:
+            logout(request)
+
         token = request.GET.get("token")
         try:
             invitation = Invitation.objects.get(token=token, is_used=False)
@@ -113,6 +117,9 @@ class RegisterViaTokenHTMLView(View):
             user.email = invitation.email
             user.is_voter = True
             user.save()
+
+            VoterProfile.objects.create(user=user, election_event=invitation.election_event)
+
             invitation.is_used = True
             invitation.save()
             login(request, user)

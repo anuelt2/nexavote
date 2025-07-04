@@ -1,0 +1,17 @@
+<!-- voter election event -->
+{% extends "base.html" %}
+
+{% block title %}Election Event{% endblock %}
+
+{% block content %}
+<h2>{{ election_event.title }}</h2>
+<p>{{ election_event.description }}</p>
+<p><strong>Opens:</strong> {{ election_event.start_time }}</p>
+<p><strong>Closes:</strong> {{ election_event.end_time }}</p>
+
+{% if election_event.is_open %}
+<a href="{% url 'election-list' %}?event={{ election_event.id }}">View Elections</a>
+{% else %}
+<p>Elections not currently open.</p>
+{% endif %}
+{% endblock %}

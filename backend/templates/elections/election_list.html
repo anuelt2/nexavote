@@ -1,0 +1,22 @@
+<!-- election_list -->
+{% extends "base.html" %}
+
+{% block title %}Elections{% endblock %}
+
+{% block content %}
+<h2>Elections</h2>
+
+{% if elections %}
+<ul>
+    {% for election in elections %}
+    <li>
+        <strong>{{ election.title }}</strong><br>
+        {{ election.description }}<br>
+        <a href="{% url 'election-detail' election.pk %}">View & Vote</a>
+    </li>
+    {% endfor %}
+</ul>
+{% else %}
+<p>No elections available in this election event.</p>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,28 @@
+<!-- election detail -->
+ {% extends "base.html" %}
+
+ {% block title %}{{ election.title }}{% endblock %}
+
+ {% block content %}
+ <h2>{{ election.title }}</h2>
+ <p>{{ election.description }}</p>
+
+ {% if has_voted %}
+ <p style="color: green;">You have already voted in this election.</p>
+ {% endif %}
+
+ {% if show_form %}
+ <form method="post">
+    {% csrf_token %}
+    {% for candidate in candidates %}
+    <div>
+        <label>
+            <input type="radio" name="candidate" value="{{ candidate.id }}" required>
+            {{ candidate.first_name }} {{ candidate.last_name }}
+        </label>
+    </div>
+    {% endfor %}
+    <button type="submit">Vote</button>
+ </form>
+ {% endif %}
+ {% endblock %}
