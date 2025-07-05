@@ -5,7 +5,9 @@ from elections.views import (
     ElectionListView, CandidateListView,
     ElectionAdminCreateView, ElectionAdminDetailView,
     CandidateAdminCreateView, CandidateAdminDetailView,
-    VoterElectionListView, VoterElectionDetailView
+    VoterElectionListView, VoterElectionDetailView,
+    AdminElectionResultsView, CandidateCreateView,
+    ElectionCreateView
 )
 
 
@@ -23,5 +25,8 @@ urlpatterns = [
 
     # HTML templates routes
     path('elections/', VoterElectionListView.as_view(), name='election-list'),
-    path('elections/<uuid:pk>/', VoterElectionDetailView.as_view(), name='election-detail')
+    path('elections/<uuid:pk>/', VoterElectionDetailView.as_view(), name='election-detail'),
+    path('elections/admin/results/', AdminElectionResultsView.as_view(), name='election-results'),
+    path('elections/admin/add-candidate/', CandidateCreateView.as_view(), name='add-candidate'),
+    path('elections/admin/add-election/', ElectionCreateView.as_view(), name='add-election'),
 ]
