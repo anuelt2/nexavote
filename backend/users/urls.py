@@ -8,6 +8,7 @@ from users.views import (
     RegisterViaTokenHTMLView,
     LogoutAnyMethodView,
     AdminStaffRegistrationView,
+    VoterListView,
 )
 
 
@@ -20,4 +21,5 @@ urlpatterns = [
     path('register/voter/html/', RegisterViaTokenHTMLView.as_view(), name='register-voter-html'),
     path('login/', LoginView.as_view(), name='login'),
     path('logout/', LogoutAnyMethodView.as_view(), name='html-logout'),
+    path('voters/', VoterListView.as_view(), name='voter-list'),
 ]
