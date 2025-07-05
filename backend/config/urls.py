@@ -32,4 +32,7 @@ urlpatterns = [
     # Election Events API Endpoints
     path('api/election-events/', include('election_events.urls')),
     path('api/', include('elections.urls')),
+
+    # API Documentation
+    path('docs/', include('docs.urls')),
 ]

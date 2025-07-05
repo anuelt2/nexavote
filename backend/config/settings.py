@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     'invitations',
     'users',
     'votes',
+    'docs',
 ]
 
 MIDDLEWARE = [
