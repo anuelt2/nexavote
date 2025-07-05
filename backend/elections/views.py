@@ -5,9 +5,12 @@ from django.views.generic import ListView
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.admin.views.decorators import staff_member_required
+from django.utils.decorators import method_decorator
 
 from rest_framework import generics, permissions
 
+from elections.forms import CandidateForm, ElectionForm
 from elections.models import Election, Candidate
 from elections.serializers import ElectionSerializer, CandidateSerializer
 from users.models import VoterProfile
@@ -139,3 +142,72 @@ class VoterElectionDetailView(LoginRequiredMixin, View):
         request.session["just_voted"] = True
 
         return redirect("election-detail", pk=pk)
+
+
+class AdminElectionResultsView(View):
+    """
+    """
+    @method_decorator(staff_member_required)
+    def get(self, request):
+        """
+        """
+        elections = Election.objects.all().prefetch_related('candidates__votes', 'candidates')
+        results = []
+
+        for election in elections:
+            candidates = election.candidates.all()
+            candidate_data = []
+            for candidate in candidates:
+                vote_count = candidate.votes.count()
+                candidate_data.append({
+                    "name": f"{candidate.first_name} {candidate.last_name}",
+                    "votes": vote_count,
+                })
+            results.append({
+                "election": election,
+                "candidates": candidate_data
+            })
+        
+        return render(request, "elections/admin_results.html", {"results": results})
+
+
+class CandidateCreateView(View):
+    """
+    """
+    @method_decorator(staff_member_required)
+    def get(self, request):
+        """
+        """
+        form = CandidateForm()
+        return render(request, "elections/candidate_create.html", {"form": form})
+    
+    @method_decorator(staff_member_required)
+    def post(self, request):
+        """
+        """
+        form = CandidateForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect("election-results")
+        return render(request, "elections/candidate_create.html", {"form": form})
+
+
+class ElectionCreateView(View):
+    """
+    """
+    @method_decorator(staff_member_required)
+    def get(self, request):
+        """
+        """
+        form = ElectionForm()
+        return render(request, "elections/election_create.html", {"form": form})
+    
+    @method_decorator(staff_member_required)
+    def post(self, request):
+        """
+        """
+        form = ElectionForm()
+        if form.is_valid():
+            form.save()
+            return redirect("election-results")
+        return render(request, "elections/election_create.html", {"form": form})

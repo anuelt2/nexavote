@@ -1,6 +1,8 @@
 """
 """
 from django.contrib.auth import get_user_model, login, logout
+from django.contrib.admin.views.decorators import staff_member_required
+from django.utils.decorators import method_decorator
 from django.shortcuts import render, redirect
 from django.views import View
 from django.contrib.auth.forms import UserCreationForm
@@ -126,3 +128,14 @@ class RegisterViaTokenHTMLView(View):
             return redirect("home")
         
         return render(request, "users/register_voter.html", {"form": form})
+    
+
+class VoterListView(View):
+    """
+    """
+    @method_decorator(staff_member_required)
+    def get(self, request):
+        """
+        """
+        voters = VoterProfile.objects.select_related('user', 'election_event')
+        return render(request, "users/voter_list.html", {"voters": voters})
