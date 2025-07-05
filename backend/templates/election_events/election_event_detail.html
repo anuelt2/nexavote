@@ -1,0 +1,24 @@
+<!-- voter election event -->
+{% extends "base.html" %}
+
+{% block title %}Election Event{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <h3 class="card-title">{{ election_event.title }}</h3>
+            <p class="card-text text-muted">{{ election_event.description }}</p>
+            <p><strong>Opens:</strong> {{ election_event.start_time|date:"d-M-Y H:i" }}</p>
+            <p><strong>Closes:</strong> {{ election_event.end_time|date:"d-M-Y H:i" }}</p>
+            <p><strong>Status:</strong>
+                {% if election_event.is_open %}
+                <span class="text-success">Open</span>
+                {% else %}
+                <span class="text-danger">Closed</span>
+                {% endif %}
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

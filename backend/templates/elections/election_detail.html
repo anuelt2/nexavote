@@ -1,0 +1,35 @@
+<!-- election detail -->
+ {% extends "base.html" %}
+
+ {% block title %}{{ election.title }}{% endblock %}
+
+ {% block content %}
+ <div class="container py-5">
+     <div class="row justify-content-center">
+         <div class="col-md-6">
+             <h2 class="mb-3">{{ election.title }}</h2>
+             <p class="text-muted">{{ election.description }}</p>
+
+             {% if has_voted %}
+             <div class="alert alert-success">You have already voted in this election.</div>
+             {% else %}
+             <form method="post" class="card p-4 shadow-sm bg-white border-0">
+                {% csrf_token %}
+                <fieldset class="mb-3">
+                    <legend class="h5">Choose a candidate:</legend>
+                    {% for candidate in candidates %}
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="radio" name="candidate" id="candidate{{ candidate.id }}" value="{{ candidate.id }}" required>
+                        <label class="form-check-label" for="candidate{{ candidate.id }}">
+                            {{ candidate.first_name }} {{ candidate.last_name }}
+                        </label>
+                    </div>
+                    {% endfor %}
+                </fieldset>
+                <button type="submit" class="btn btn-primary mt-3 w-100">Vote</button>
+             </form>
+             {% endif %}
+         </div>
+     </div>
+ </div>
+ {% endblock %}
