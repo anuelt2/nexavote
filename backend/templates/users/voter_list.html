@@ -1,0 +1,35 @@
+<!-- voter list -->
+{% extends "base.html" %}
+
+{% block title %}Registered Voters{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <h2 class="mb-4">Registered Voters</h2>
+    
+    {% if voters %}
+    <table class="table table-bordered table-hover">
+        <thead>
+            <tr>
+                <th>Email</th>
+                <th>Name</th>
+                <th>Election Event</th>
+                <th>Voter ID</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for voter in voters %}
+            <tr>
+                <td>{{ voter.user.email }}</td>
+                <td>{{ voter.user.first_name }} {{ voter.user.last_name }}</td>
+                <td>{{ voter.election_event.title }}</td>
+                <td>{{ voter.id }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="alert alert-warning">No registered voters for this election event.</div>
+    {% endif %}
+</div>
+{% endblock %}

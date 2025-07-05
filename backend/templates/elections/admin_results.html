@@ -1,0 +1,30 @@
+<!-- admin results -->
+{% extends "base.html" %}
+
+{% block title %}Election Results{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <h2 class="mb-4">Election Results</h2>
+    
+    {% if results %}
+    {% for result in results %}
+    <div class="card mb-4 shadow-sm">
+        <div class="card-body">
+            <h4 class="card-title">{{ result.election.title }}</h4>
+            <ul class="list-group">
+                {% for candidate in result.candidates %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    {{ candidate.name }}
+                    <span class="badge bg-primary rounded-pill">{{ candidate.votes }}</span>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="alert alert-warning">No election results available at this time.</div>
+    {% endif %}
+</div>
+{% endblock %}
