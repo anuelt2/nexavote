@@ -206,7 +206,7 @@ class ElectionCreateView(View):
     def post(self, request):
         """
         """
-        form = ElectionForm()
+        form = ElectionForm(request.POST)
         if form.is_valid():
             form.save()
             return redirect("election-results")
