@@ -108,22 +108,38 @@ class RegisterViaTokenHTMLView(View):
         """
         """
         token = request.GET.get("token")
+
         try:
             invitation = Invitation.objects.get(token=token, is_used=False)
         except Invitation.DoesNotExist:
             return render(request, "users/register_voter.html", {"invalid_token": True})
         
         form = VoterRegistrationForm(request.POST, initial={"email": invitation.email})
+        
         if form.is_valid():
-            user = form.save(commit=False)
-            user.email = invitation.email
-            user.is_voter = True
-            user.save()
+            first_name = form.cleaned_data["first_name"]
+            last_name = form.cleaned_data["last_name"]
+            password = form.cleaned_data["password1"]
 
-            VoterProfile.objects.create(user=user, election_event=invitation.election_event)
+            user = User.objects.filter(email=invitation.email).first()
+
+            if user is None:
+                user = User.objects.create_user(
+                    email=invitation.email,
+                    first_name=first_name,
+                    last_name=last_name,
+                    password=password,
+                    role="voter"
+                )
+            
+            try:
+                voter = user.voterprofile
+            except VoterProfile.DoesNotExist:
+                    voter = VoterProfile.objects.create(user=user, election_event=invitation.election_event)
 
             invitation.is_used = True
             invitation.save()
+
             login(request, user)
             return redirect("home")
         
