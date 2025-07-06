@@ -1,6 +1,7 @@
 """
 """
 from django.contrib.auth import get_user_model, login, logout
+from django.contrib.auth.views import LoginView
 from django.contrib.admin.views.decorators import staff_member_required
 from django.utils.decorators import method_decorator
 from django.shortcuts import render, redirect
@@ -76,6 +77,18 @@ class AdminStaffRegistrationView(APIView):
             serializer.errors,
             status=status.HTTP_400_BAD_REQUEST
         )
+
+
+class CustomLoginView(LoginView):
+    """
+    """
+    def dispatch(self, request, *args, **kwargs):
+        """
+        """
+        print("CustomLoginView dispatch called - user authenticated:", request.user.is_authenticated)
+        if request.user.is_authenticated:
+            return redirect("home")
+        return super().dispatch(request, *args, **kwargs)
 
 
 class LogoutAnyMethodView(View):
