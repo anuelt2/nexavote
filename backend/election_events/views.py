@@ -1,4 +1,8 @@
 """
+election_events/views.py
+
+This module defines views for the election_events application.
+Contains both API views and HTML template views for election event management.
 """
 from django.views.generic import View
 from django.shortcuts import render, get_object_or_404
@@ -12,6 +16,14 @@ from users.models import VoterProfile
 
 class ElectionEventListView(generics.ListAPIView):
     """
+    API view for listing all election events.
+    
+    This view provides a read-only endpoint that returns a list of all
+    election events in the system using the ElectionEventSerializer.
+    
+    Attributes:
+        queryset: All ElectionEvent objects
+        serializer_class: ElectionEventSerializer for JSON serialization
     """
     queryset = ElectionEvent.objects.all()
     serializer_class = ElectionEventSerializer
@@ -19,9 +31,25 @@ class ElectionEventListView(generics.ListAPIView):
 
 class VoterElectionEventDetailView(LoginRequiredMixin, View):
     """
+    HTML view for displaying election event details to authenticated voters.
+    
+    This view shows the election event details for the election event
+    that the authenticated voter is associated with.
+    
+    Requires user authentication via LoginRequiredMixin.
     """
     def get(self, request):
         """
+        Handle GET requests to display election event details.
+        
+        Retrieves the voter's profile and displays their associated
+        election event details using an HTML template.
+        
+        Args:
+            request: The HTTP request object
+            
+        Returns:
+            HttpResponse: Rendered HTML template with election event context
         """
         profile = get_object_or_404(VoterProfile, user=request.user)
         event = profile.election_event
