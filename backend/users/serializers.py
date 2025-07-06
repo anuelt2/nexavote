@@ -14,7 +14,6 @@ class RegisterViaTokenSerializer(serializers.Serializer):
     """
     Register user via invitation token.
     """
-
     token = serializers.UUIDField()
     first_name = serializers.CharField(max_length=50)
     last_name = serializers.CharField(max_length=50)
@@ -24,11 +23,14 @@ class RegisterViaTokenSerializer(serializers.Serializer):
         """
         Checks that invitation token is valid and unused.
         """
-        try:
-            invitation = Invitation.objects.get(token=value, is_used=False)
-        except Invitation.DoesNotExist:
-            raise serializers.ValidationError("Invalid or expired token.")
-        return invitation
+        # try:
+            # invitation = Invitation.objects.get(token=value, is_used=False)
+        # except Invitation.DoesNotExist:
+            # raise serializers.ValidationError("Invalid or expired token.")
+        # return invitation
+        if not Invitation.objects.filter(token=value, is_used=False).exists():
+            raise serializers.ValidationError("Invalid or expired token")
+        return value
 
     # def validate(self, data):
         """
@@ -62,18 +64,29 @@ class RegisterViaTokenSerializer(serializers.Serializer):
         Returns:
             User: The newly created voter user
         """
-        invitation = validated_data["token"]
+        token = validated_data["token"]
+        invitation = Invitation.objects.get(token=token, is_used=False)
         password = validated_data["password"]
         first_name = validated_data["first_name"]
         last_name = validated_data["last_name"]
+        email = invitation.email
+        election_event = invitation.election_event
 
-        user = User.objects.create_user(
-            email=invitation.email,
-            password=password,
-            first_name=first_name,
-            last_name=last_name,
-            role="voter",
+        user, created = User.objects.get_or_create(
+            email=email,
+            defaults={
+                "first_name": first_name,
+                "last_name": last_name,
+                "role": "voter",
+            }
         )
+
+        if created:
+            user.set_password(password)
+            user.save()
+        
+        if VoterProfile.objects.filter(user=user, election_event=election_event).exists():
+            raise serializers.validationError("You are already registered as a voter for this election event.")
 
         VoterProfile.objects.create(user=user, election_event=invitation.election_event)
 

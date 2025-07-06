@@ -8,6 +8,7 @@ and API documentation.
 URL Structures:
 """
 from django.contrib import admin
+from django.contrib.auth import views as auth_views
 from django.urls import path, include
 
 from core.views import api_root, HomeView
@@ -16,6 +17,9 @@ from core.views import api_root, HomeView
 urlpatterns = [
     # Admin Interface
     path('admin/', admin.site.urls),
+
+    path('auth/reset/<uidb64>/<token>/', auth_views.PasswordResetConfirmView.as_view(), name='password_reset_confirm'),
+    path('auth/', include('django.contrib.auth.urls')),
 
     # API login/logout
     path('api-auth/', include('rest_framework.urls')),
