@@ -1,0 +1,55 @@
+<!-- admin_elections_list -->
+{% extends "base.html" %}
+
+{% block title %}All Elections{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <h2 class="mb-4">All Elections</h2>
+
+    {% for event in events %}
+    <div class="mb-5">
+        <h3>{{ event.title }} ({{ event.election_count }} election{{ event.election_count|pluralize }})</h3>
+        {% if event.elections.all %}
+        <div class="accordion" id="accordion-{{ event.id }}">
+            {% for election in event.elections.all %}
+            <div class="accordion-item">
+                <h2 clss="accordion-header" id="heading-{{ election.id }}">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-{{ election.id }}">
+                        {{ election.title }} - {{ election.start_time|date:"d M Y" }} to {{ election.end_time|date:"d M Y" }} ({{ election.vote_count }} votes)
+                    </button>
+                </h2>
+                <div id="collapse-{{ election.id }}" class="accordion-collapse collapse" data-bs-parent="#accordion-{{ event.id }}">
+                    <div class="accordion-body">
+                        {% if election.candidates.all %}
+                        <ul class="list-group">
+                            {% for cand in election.candidates.all %}
+                            <li class="list-group-item d-flex justify-content-between">
+                                {{ cand.first_name }} {{ cand.last_name }}
+                                <span class="badge bg-secondary">{{ cand.votes.count }}</span>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                        {% else %}
+                        <p>No candidates yet.</p>
+                        {% endif %}
+                        <div class="mt-3">
+                            <a href="{% url 'add-candidate' election.id %}" class="btn btn-success btn-sm">Add Candidate</a>
+                            <a href="{% url 'election-admin-detail' election.id %}" class="btn btn-outline-primarybtn-sm">Manage</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p>No elections for this election event yet.</p>
+        {% endif %}
+    </div>
+    {% endfor %}
+
+    {% if not events %}
+    <div class="alert alert-info">No election events with elections available</div>
+    {% endif %}
+</div>
+{% endblock %}
