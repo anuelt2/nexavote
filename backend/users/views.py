@@ -1,4 +1,8 @@
 """
+Django views module for user registration and authentication.
+
+This module contains view classes for handling user registration via invitation tokens,
+admin/staff registration, logout functionality, and voter management.
 """
 from django.contrib.auth import get_user_model, login, logout
 from django.contrib.auth.views import LoginView
@@ -16,13 +20,15 @@ from users.models import VoterProfile
 from invitations.models import Invitation
 from users.forms import VoterRegistrationForm
 
+
 User = get_user_model()
 
 
 class RegisterViaTokenView(APIView):
     """
-    POST endpoint to register a voter via a one-time invitation token
+    API endpoint to register a voter via a one-time invitation token.
     """
+    
     def post(self, request):
         """
         Process voter registration via invitation token.
@@ -37,24 +43,24 @@ class RegisterViaTokenView(APIView):
         if serializer.is_valid():
             user = serializer.save()
             return Response(
-                    {"message": "Voter registration successful"},
-                    status=status.HTTP_201_CREATED
-                    )
+                {"message": "Voter registration successful"},
+                status=status.HTTP_201_CREATED
+            )
         return Response(
-                serializer.errors,
-                status=status.HTTP_400_BAD_REQUEST
-                )
+            serializer.errors,
+            status=status.HTTP_400_BAD_REQUEST
+        )
 
 
 class AdminStaffRegistrationView(APIView):
     """
-    View to handle direct registration for admin and staff users.
+    API view to handle direct registration for admin and staff users.
     
     This view allows administrators to create admin and staff accounts
     without using an invitation token.
     """
     permission_classes = [permissions.IsAdminUser]  # Only admins can create admin/staff accounts
-
+    
     def post(self, request):
         """
         Process admin or staff user registration.
@@ -92,21 +98,46 @@ class CustomLoginView(LoginView):
 
 class LogoutAnyMethodView(View):
     """
+    View to handle logout for any HTTP method and redirect to home.
     """
+    
     def dispatch(self, request, *args, **kwargs):
+        """
+        Handle logout for any HTTP method.
+        
+        Args:
+            request: The HTTP request object
+            *args: Variable positional arguments
+            **kwargs: Variable keyword arguments
+            
+        Returns:
+            HttpResponseRedirect: Redirect to home page
+        """
         logout(request)
         return redirect('home')
 
 
 class RegisterViaTokenHTMLView(View):
     """
+    HTML view to handle voter registration via invitation token.
+    
+    Provides GET and POST methods to display and process the voter
+    registration form using invitation tokens.
     """
+    
     def get(self, request):
         """
+        Display voter registration form with token validation.
+        
+        Args:
+            request: The HTTP request object
+            
+        Returns:
+            HttpResponse: Registration form or error page
         """
         if request.user.is_authenticated:
             logout(request)
-
+        
         token = request.GET.get("token")
         try:
             invitation = Invitation.objects.get(token=token, is_used=False)
@@ -118,9 +149,15 @@ class RegisterViaTokenHTMLView(View):
     
     def post(self, request):
         """
+        Process voter registration form submission.
+        
+        Args:
+            request: The HTTP request object
+            
+        Returns:
+            HttpResponse: Success redirect or form with errors
         """
         token = request.GET.get("token")
-
         try:
             invitation = Invitation.objects.get(token=token, is_used=False)
         except Invitation.DoesNotExist:
@@ -132,9 +169,8 @@ class RegisterViaTokenHTMLView(View):
             first_name = form.cleaned_data["first_name"]
             last_name = form.cleaned_data["last_name"]
             password = form.cleaned_data["password1"]
-
             user = User.objects.filter(email=invitation.email).first()
-
+            
             if user is None:
                 user = User.objects.create_user(
                     email=invitation.email,
@@ -147,23 +183,32 @@ class RegisterViaTokenHTMLView(View):
             try:
                 voter = user.voterprofile
             except VoterProfile.DoesNotExist:
-                    voter = VoterProfile.objects.create(user=user, election_event=invitation.election_event)
-
+                voter = VoterProfile.objects.create(user=user, election_event=invitation.election_event)
+            
             invitation.is_used = True
             invitation.save()
-
             login(request, user)
             return redirect("home")
         
         return render(request, "users/register_voter.html", {"form": form})
-    
+
 
 class VoterListView(View):
     """
+    View to display a list of all voters (staff access required).
     """
+    
     @method_decorator(staff_member_required)
     def get(self, request):
         """
+        Display list of all voters with their election events.
+        
+        Args:
+            request: The HTTP request object
+            
+        Returns:
+            HttpResponse: Voter list page
         """
         voters = VoterProfile.objects.select_related('user', 'election_event')
         return render(request, "users/voter_list.html", {"voters": voters})
+

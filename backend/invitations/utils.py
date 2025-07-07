@@ -1,4 +1,8 @@
 """
+Email utilities for invitation management.
+
+This module contains utility functions for sending invitation emails
+to voters with registration links.
 """
 from django.core.mail import send_mail
 from django.conf import settings

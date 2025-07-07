@@ -1,4 +1,8 @@
 """
+elections/urls.py
+
+URL configuration for the elections application.
+This module defines the URL patterns for election and candidate related views.
 """
 from django.urls import path
 from elections.views import (

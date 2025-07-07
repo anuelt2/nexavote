@@ -1,4 +1,8 @@
 """
+elections/views.py
+
+This module defines views for the elections application.
+Contains both API views and HTML template views for election and candidate management.
 """
 from django.contrib import messages
 from django.contrib.admin.views.decorators import staff_member_required
@@ -21,13 +25,24 @@ from votes.models import Vote
 
 class ElectionListView(generics.ListAPIView):
     """
-    List elections within a specific election event.
+    API view for listing elections within a specific election event.
+    
+    This view provides a read-only endpoint that returns a list of elections.
+    It can be filtered by election event ID via query parameters.
+    
+    Attributes:
+        serializer_class: ElectionSerializer for JSON serialization
+        permission_classes: Requires authentication
     """
     serializer_class = ElectionSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
         """
+        Get the queryset of elections, optionally filtered by election event.
+        
+        Returns:
+            QuerySet: Elections filtered by event ID if provided, otherwise all elections
         """
         event_id = self.request.query_params.get('event')
         if event_id:
@@ -37,13 +52,24 @@ class ElectionListView(generics.ListAPIView):
 
 class CandidateListView(generics.ListAPIView):
     """
-    List candidates within a specific election  event.
+    API view for listing candidates within a specific election.
+    
+    This view provides a read-only endpoint that returns a list of candidates.
+    It can be filtered by election ID via query parameters.
+    
+    Attributes:
+        serializer_class: CandidateSerializer for JSON serialization
+        permission_classes: Requires authentication
     """
     serializer_class = CandidateSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
         """
+        Get the queryset of candidates, optionally filtered by election.
+        
+        Returns:
+            QuerySet: Candidates filtered by election ID if provided, otherwise all candidates
         """
         election_id = self.request.query_params.get('election')
         if election_id:
@@ -53,6 +79,14 @@ class CandidateListView(generics.ListAPIView):
 
 class ElectionAdminCreateView(generics.CreateAPIView):
     """
+    API view for creating new elections (admin only).
+    
+    This view allows administrators to create new elections via POST requests.
+    
+    Attributes:
+        queryset: All Election objects
+        serializer_class: ElectionSerializer for JSON serialization
+        permission_classes: Requires admin privileges
     """
     queryset = Election.objects.all()
     serializer_class = ElectionSerializer
@@ -61,14 +95,30 @@ class ElectionAdminCreateView(generics.CreateAPIView):
 
 class ElectionAdminDetailView(generics.RetrieveUpdateDestroyAPIView):
     """
+    API view for retrieving, updating, and deleting elections (admin only).
+    
+    This view allows administrators to perform CRUD operations on individual elections.
+    
+    Attributes:
+        queryset: All Election objects
+        serializer_class: ElectionSerializer for JSON serialization
+        permission_classes: Requires admin privileges
     """
     queryset = Election.objects.all()
     serializer_class = ElectionSerializer
-    permission_calsses = [permissions.IsAdminUser]
+    permission_classes = [permissions.IsAdminUser]
 
 
 class CandidateAdminCreateView(generics.CreateAPIView):
     """
+    API view for creating new candidates (admin only).
+    
+    This view allows administrators to create new candidates via POST requests.
+    
+    Attributes:
+        queryset: All Candidate objects
+        serializer_class: CandidateSerializer for JSON serialization
+        permission_classes: Requires admin privileges
     """
     queryset = Candidate.objects.all()
     serializer_class = CandidateSerializer
@@ -77,15 +127,30 @@ class CandidateAdminCreateView(generics.CreateAPIView):
 
 class CandidateAdminDetailView(generics.RetrieveUpdateDestroyAPIView):
     """
+    API view for retrieving, updating, and deleting candidates (admin only).
+    
+    This view allows administrators to perform CRUD operations on individual candidates.
+    
+    Attributes:
+        queryset: All Candidate objects
+        serializer_class: CandidateSerializer for JSON serialization
+        permission_classes: Requires admin privileges
     """
     queryset = Candidate.objects.all()
     serializer_class = CandidateSerializer
     permission_classes = [permissions.IsAdminUser]
 
 
-
 class VoterElectionListView(LoginRequiredMixin, ListView):
     """
+    HTML view for displaying elections to authenticated voters.
+    
+    This view shows a list of elections that belong to the voter's election event.
+    
+    Attributes:
+        model: The Election model
+        template_name: Template for rendering the election list
+        context_object_name: Context variable name for the elections
     """
     model = Election
     template_name = "elections/election_list.html"
@@ -93,6 +158,10 @@ class VoterElectionListView(LoginRequiredMixin, ListView):
 
     def get_queryset(self):
         """
+        Get elections for the authenticated voter's election event.
+        
+        Returns:
+            QuerySet: Elections belonging to the voter's election event
         """
         profile = get_object_or_404(VoterProfile, user=self.request.user)
         return Election.objects.filter(election_event=profile.election_event)
@@ -100,9 +169,21 @@ class VoterElectionListView(LoginRequiredMixin, ListView):
 
 class VoterElectionDetailView(LoginRequiredMixin, View):
     """
+    HTML view for displaying election details and handling voting.
+    
+    This view shows election details, candidates, and handles the voting process
+    for authenticated voters.
     """
     def get(self, request, pk):
         """
+        Handle GET requests to display election details and voting form.
+        
+        Args:
+            request: The HTTP request object
+            pk: The primary key of the election
+            
+        Returns:
+            HttpResponse: Rendered HTML template with election and voting context
         """
         profile = request.user.voterprofile
         election = get_object_or_404(Election, pk=pk, election_event=profile.election_event)
@@ -129,13 +210,23 @@ class VoterElectionDetailView(LoginRequiredMixin, View):
     
     def post(self, request, pk):
         """
+        Handle POST requests to submit votes.
+        
+        Args:
+            request: The HTTP request object containing vote data
+            pk: The primary key of the election
+            
+        Returns:
+            HttpResponse: Redirect to election detail page
         """
         profile = request.user.voterprofile
         election = get_object_or_404(Election, pk=pk, election_event=profile.election_event)
 
+        # Check if user has already voted
         if Vote.objects.filter(voter=request.user.voterprofile, candidate__election=election).exists():
             return redirect("election-detail", pk=pk)
         
+        # Process the vote
         candidate_id = request.POST.get("candidate")
         candidate = get_object_or_404(Candidate, pk=candidate_id, election=election)
 
@@ -148,10 +239,21 @@ class VoterElectionDetailView(LoginRequiredMixin, View):
 
 class AdminElectionResultsView(View):
     """
+    HTML view for displaying election results to administrators.
+    
+    This view shows vote counts for all candidates across all elections.
+    Requires staff privileges.
     """
     @method_decorator(staff_member_required)
     def get(self, request):
         """
+        Handle GET requests to display election results.
+        
+        Args:
+            request: The HTTP request object
+            
+        Returns:
+            HttpResponse: Rendered HTML template with election results
         """
         elections = Election.objects.all().prefetch_related('candidates__votes', 'candidates')
         results = []
@@ -175,10 +277,21 @@ class AdminElectionResultsView(View):
 
 class ElectionCreateView(View):
     """
+    HTML view for creating new candidates (admin only).
+    
+    This view provides a form interface for administrators to create new candidates.
+    Requires staff privileges.
     """
     @method_decorator(staff_member_required)
     def get(self, request, event_id=None):
         """
+        Handle GET requests to display candidate creation form.
+        
+        Args:
+            request: The HTTP request object
+            
+        Returns:
+            HttpResponse: Rendered HTML template with candidate creation form
         """
         event = None
         initial = {}
@@ -193,6 +306,13 @@ class ElectionCreateView(View):
     @method_decorator(staff_member_required)
     def post(self, request):
         """
+        Handle POST requests to create new candidates.
+        
+        Args:
+            request: The HTTP request object containing form data
+            
+        Returns:
+            HttpResponse: Redirect to election results or form with errors
         """
         form = ElectionForm(request.POST)
         if form.is_valid():
@@ -203,10 +323,21 @@ class ElectionCreateView(View):
 
 class AdminElectionListView(View):
     """
+    HTML view for creating new elections (admin only).
+    
+    This view provides a form interface for administrators to create new elections.
+    Requires staff privileges.
     """
     @method_decorator(staff_member_required)
     def get(self, request):
         """
+        Handle GET requests to display election creation form.
+        
+        Args:
+            request: The HTTP request object
+            
+        Returns:
+            HttpResponse: Rendered HTML template with election creation form
         """
         event_qs = (
             ElectionEvent.objects
@@ -244,6 +375,13 @@ class CandidateCreateView(View):
     @method_decorator(staff_member_required)
     def post(self, request, election_id):
         """
+        Handle POST requests to create new elections.
+        
+        Args:
+            request: The HTTP request object containing form data
+            
+        Returns:
+            HttpResponse: Redirect to election results or form with errors
         """
         election = get_object_or_404(Election, id=election_id)
         form = CandidateForm(request.POST)

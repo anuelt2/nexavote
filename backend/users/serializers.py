@@ -1,4 +1,8 @@
 """
+Django REST Framework serializers for user registration.
+
+This module contains serializers for handling user registration via invitation tokens
+and direct admin/staff registration.
 """
 from rest_framework import serializers
 from django.contrib.auth import get_user_model

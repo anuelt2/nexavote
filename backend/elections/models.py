@@ -20,6 +20,18 @@ class Election(BaseUUIDModel):
     """
     Election model representing a specific voting event within an
     election event.
+    
+    An election is a specific contest (e.g., "President", "Vice President")
+    that occurs within a broader election event. Each election has its own
+    set of candidates and timing.
+    
+    Attributes:
+        election_event (ForeignKey): The election event this election belongs to
+        title (CharField): The name/title of the election
+        description (TextField): Detailed description of the election
+        start_time (DateTimeField): When voting begins for this election
+        end_time (DateTimeField): When voting ends for this election
+        is_active (BooleanField): Whether the election is currently active
     """
     election_event = models.ForeignKey(
         ElectionEvent,
@@ -34,14 +46,23 @@ class Election(BaseUUIDModel):
 
     def is_open(self):
         """
+        Check if the election is currently open for voting.
+        
+        An election is considered open if it's active and the current
+        time falls within the start and end time window.
+        
+        Returns:
+            bool: True if the election is open for voting, False otherwise
         """
         now = timezone.now()
         return self.is_active and self.start_time <= now <= self.end_time
     
     def __str__(self):
         """
-        Return string representation with election title and
-        election_event title.
+        Return string representation of the election.
+        
+        Returns:
+            str: The election title followed by the election event title
         """
         return f"{self.title} ({self.election_event.title})"
     
@@ -87,6 +108,13 @@ class Candidate(BaseUUIDModel):
     election within a specific election event.
 
     Candidate may optionally be a registered voter.
+    
+    Attributes:
+        election (ForeignKey): The election this candidate is contesting in
+        first_name (CharField): The candidate's first name
+        last_name (CharField): The candidate's last name
+        bio (TextField): Optional biographical information about the candidate
+        user (ForeignKey): Optional link to a User account if candidate is also a voter
     """
     election = models.ForeignKey(
         Election,
@@ -106,7 +134,9 @@ class Candidate(BaseUUIDModel):
 
     def __str__(self):
         """
-        Return string representation with candidate name and
-        election contested.
+        Return string representation of the candidate.
+        
+        Returns:
+            str: The candidate's full name followed by the election title
         """
         return f"{self.first_name} {self.last_name} ({self.election.title})"

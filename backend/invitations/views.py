@@ -1,13 +1,15 @@
 """
+Django views for invitation management.
+
+This module contains view classes for creating and managing voter invitations
+via both API and HTML interfaces.
 """
 from django.views import View
 from django.contrib import messages
 from django.contrib.admin.views.decorators import staff_member_required
 from django.shortcuts import render, redirect
 from django.utils.decorators import method_decorator
-
 from rest_framework import generics, permissions
-
 from invitations.forms import InvitationForm
 from invitations.models import Invitation
 from invitations.serializers import InvitationCreateSerializer
@@ -16,13 +18,20 @@ from invitations.utils import send_invite_email
 
 class InvitationCreateAPIView(generics.CreateAPIView):
     """
+    API view for creating voter invitations.
+    
+    Allows admin users to create invitations via API endpoint.
     """
     queryset = Invitation.objects.all()
     serializer_class = InvitationCreateSerializer
     permission_classes = [permissions.IsAdminUser]
-
+    
     def perform_create(self, serializer):
         """
+        Handle invitation creation and send email notification.
+        
+        Args:
+            serializer: The validated serializer instance
         """
         invitation = serializer.save()
         send_invite_email(invitation, use_api=True)
@@ -30,10 +39,21 @@ class InvitationCreateAPIView(generics.CreateAPIView):
 
 class InvitationCreateView(View):
     """
+    HTML view for creating voter invitations.
+    
+    Provides form-based interface for staff members to create invitations.
     """
+    
     @method_decorator(staff_member_required)
     def get(self, request):
         """
+        Display invitation creation form.
+        
+        Args:
+            request: The HTTP request object
+            
+        Returns:
+            HttpResponse: Invitation form page
         """
         form = InvitationForm()
         return render(request, "invitations/invite.html", {"form": form})
@@ -41,22 +61,30 @@ class InvitationCreateView(View):
     @method_decorator(staff_member_required)
     def post(self, request):
         """
+        Process invitation creation form submission.
+        
+        Args:
+            request: The HTTP request object
+            
+        Returns:
+            HttpResponse: Success redirect or form with errors
         """
         form = InvitationForm(request.POST)
+        
         if form.is_valid():
             email = form.cleaned_data['email']
             election_event = form.cleaned_data['election_event']
-
+            
             existing_invitation = Invitation.objects.filter(
                 email=email,
                 election_event=election_event,
                 is_used=False
             ).first()
-
+            
             if existing_invitation:
                 messages.warning(request, f"An unused invitation has already been sent to {email} for this election.")
-                return render(request, "invitations/invite.html"), {"form": form}
-
+                return render(request, "invitations/invite.html", {"form": form})
+            
             invitation = form.save(commit=False)
             invitation.save()
             send_invite_email(invitation, use_api=False)

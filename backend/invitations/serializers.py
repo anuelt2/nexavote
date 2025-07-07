@@ -1,4 +1,8 @@
 """
+Django REST Framework serializers for invitation management.
+
+This module contains serializers for handling invitation creation
+with validation for election events and email addresses.
 """
 from rest_framework import serializers
 
