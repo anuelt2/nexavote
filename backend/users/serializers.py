@@ -4,7 +4,6 @@ Django REST Framework serializers for user registration.
 This module contains serializers for handling user registration via invitation tokens
 and direct admin/staff registration.
 """
-
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 
@@ -27,36 +26,9 @@ class RegisterViaTokenSerializer(serializers.Serializer):
         """
         Checks that invitation token is valid and unused.
         """
-        # try:
-            # invitation = Invitation.objects.get(token=value, is_used=False)
-        # except Invitation.DoesNotExist:
-            # raise serializers.ValidationError("Invalid or expired token.")
-        # return invitation
         if not Invitation.objects.filter(token=value, is_used=False).exists():
             raise serializers.ValidationError("Invalid or expired token")
         return value
-
-    # def validate(self, data):
-        """
-        Additional validation to ensure only voter registrations are processed.
-
-        Args:
-            data (dict): The serializer data
-
-        Returns:
-            dict: Validated data
-
-        Raises:
-            ValidationError: If attempting to register a non-voter role
-        """
-        # invitation = data.get("token")
-        # if invitation:
-            # Explicitly prevent admin/staff registration via token
-            # if invitation.election_event.role in ["admin", "staff"]:
-                # raise serializers.ValidationError(
-                    # "Admin and staff cannot register via token."
-                # )
-        # return data
 
     def create(self, validated_data):
         """
@@ -107,7 +79,6 @@ class AdminStaffRegistrationSerializer(serializers.ModelSerializer):
     This serializer allows admins and staff to register directly,
     without requiring an invitation token.
     """
-
     class Meta:
         model = User
         fields = ["email", "first_name", "last_name", "password", "role"]
@@ -142,7 +113,6 @@ class AdminStaffRegistrationSerializer(serializers.ModelSerializer):
         Returns:
             User: The newly created admin or staff user
         """
-        # Use create_user to handle password hashing
         user = User.objects.create_user(
             email=validated_data["email"],
             password=validated_data["password"],

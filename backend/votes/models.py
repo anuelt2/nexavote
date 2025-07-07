@@ -11,7 +11,7 @@ from django.db import models
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 from core.models import BaseUUIDModel
-from elections.models import Election, Candidate
+from elections.models import Candidate
 from users.models import VoterProfile
 
 
@@ -135,7 +135,7 @@ class Vote(BaseUUIDModel):
         from django.db.models import Count
         
         results = cls.objects.filter(
-            candidate__election=election,  # Fixed: use candidate__election instead of election
+            candidate__election=election,
             is_verified=True
         ).values(
             'candidate__id',
@@ -167,14 +167,14 @@ class Vote(BaseUUIDModel):
         
         elections = election_event.elections.all()
         voted_voters = cls.objects.filter(
-            candidate__election__in=elections  # Fixed: use candidate__election__in instead of election__in
+            candidate__election__in=elections
         ).values('voter').distinct().count()
         total_invited = election_event.invitations.filter(is_used=True).count()
 
         votes_per_election = {}
         for election in elections:
             votes_per_election[election.title] = cls.objects.filter(
-                candidate__election=election,  # Fixed: use candidate__election instead of election
+                candidate__election=election,
                 is_verified=True
             ).count()
         

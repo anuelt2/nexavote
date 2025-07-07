@@ -11,7 +11,7 @@ from elections.views import (
     CandidateAdminCreateView, CandidateAdminDetailView,
     VoterElectionListView, VoterElectionDetailView,
     AdminElectionResultsView, CandidateCreateView,
-    ElectionCreateView
+    ElectionCreateView, AdminElectionListView
 )
 
 
@@ -31,6 +31,8 @@ urlpatterns = [
     path('elections/', VoterElectionListView.as_view(), name='election-list'),
     path('elections/<uuid:pk>/', VoterElectionDetailView.as_view(), name='election-detail'),
     path('elections/admin/results/', AdminElectionResultsView.as_view(), name='election-results'),
-    path('elections/admin/add-candidate/', CandidateCreateView.as_view(), name='add-candidate'),
+    path('elections/admin/<uuid:election_id>/add-candidate/', CandidateCreateView.as_view(), name='add-candidate'),
     path('elections/admin/add-election/', ElectionCreateView.as_view(), name='add-election'),
+    path('elections/admin/add-election/<uuid:event_id>/', ElectionCreateView.as_view(), name='add-election-for-election-event'),
+    path('elections/admin/elections/', AdminElectionListView.as_view(), name='admin-elections'),
 ]

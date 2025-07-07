@@ -7,9 +7,10 @@ and managing elections and also the Candidate model.
 Each election has candidates to choose from and a time window
 for voting.
 """
+from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
-from django.conf import settings
 
 from core.models import BaseUUIDModel
 from election_events.models import ElectionEvent
@@ -64,6 +65,41 @@ class Election(BaseUUIDModel):
             str: The election title followed by the election event title
         """
         return f"{self.title} ({self.election_event.title})"
+    
+    def save(self, *args, **kwargs):
+        """
+        Set default start and end times from election_event if not provided.
+        """
+        if self.election_event:
+            if not self.start_time:
+                self.start_time = self.election_event.start_time
+            if not self.end_time:
+                self.end_time = self.election_event.end_time
+        
+        self.full_clean()
+        super().save(*args, **kwargs)
+    
+    def clean(self):
+        """
+        Ensure election start and end times falls within election_event start
+        and end times.
+        """
+        if (
+            self.start_time and
+            self.election_event and
+            self.start_time < self.election_event.start_time
+        ):
+            raise ValidationError(
+                "Election start time cannot be before election event start time."
+            )
+        if (
+            self.end_time and
+            self.election_event and
+            self.end_time > self.election_event.end_time
+        ):
+            raise ValidationError(
+                "Election end time cannot be after election event end time."
+            )
 
 
 class Candidate(BaseUUIDModel):

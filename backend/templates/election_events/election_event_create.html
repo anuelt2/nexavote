@@ -1,17 +1,15 @@
-<!-- candidate create -->
+<!-- election event create -->
 {% extends "base.html" %}
 {% load form_extras %}
 
-{% block title %}Add Candidate{% endblock %}
+{% block title %}Create Election Event{% endblock %}
 
 {% block content %}
 <div class="container py-5">
     <div class="row justify-content-center">
         <div class="col-md-6">
-            <h2 class="mb-4 text-center">Add New Candidate</h2>
-            <h3 class="mb-4 text-center">{{ election.title }}</h3>
-            <h3 class="mb-4 text-center">{{ election.election_event.title }}</h3>
-    
+            <h2 class="mb-4">Create New Election Event</h2>
+            
             <form method="post" class="card p-4 shadow-sm bg-white border-0">
                 {% csrf_token %}
                 {% for field in form %}
@@ -23,7 +21,7 @@
                     {% endif %}
                 </div>
                 {% endfor %}
-                <button type="submit" class="btn btn-success w-100">Add Candidate</button>
+                <button type="submit" class="btn btn-success w-100">Create Election Event</button>
             </form>
         </div>
     </div>

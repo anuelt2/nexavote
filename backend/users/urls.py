@@ -5,13 +5,14 @@ This module defines URL patterns for user-related views including
 registration, login, logout, and voter management.
 """
 from django.urls import path
-from django.contrib.auth.views import LoginView, LogoutView
+# from django.contrib.auth.views import LoginView, LogoutView
+
 from users.views import (
     RegisterViaTokenView,
     RegisterViaTokenHTMLView,
     LogoutAnyMethodView,
     AdminStaffRegistrationView,
-    VoterListView,
+    VoterListView, CustomLoginView
 )
 
 urlpatterns = [
@@ -21,7 +22,7 @@ urlpatterns = [
     
     # HTML templates routes
     path('register/voter/html/', RegisterViaTokenHTMLView.as_view(), name='register-voter-html'),
-    path('login/', LoginView.as_view(), name='login'),
-    path('logout/', LogoutAnyMethodView.as_view(), name='html-logout'),
+    path('custom-login/', CustomLoginView.as_view(), name='custom-login'),
+    path('custom-logout/', LogoutAnyMethodView.as_view(), name='custom-logout'),
     path('voters/', VoterListView.as_view(), name='voter-list'),
 ]

@@ -5,14 +5,16 @@ This module contains view classes for handling user registration via invitation 
 admin/staff registration, logout functionality, and voter management.
 """
 from django.contrib.auth import get_user_model, login, logout
+from django.contrib.auth.views import LoginView
 from django.contrib.admin.views.decorators import staff_member_required
 from django.utils.decorators import method_decorator
 from django.shortcuts import render, redirect
 from django.views import View
-from django.contrib.auth.forms import UserCreationForm
+
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, permissions
+
 from users.serializers import RegisterViaTokenSerializer, AdminStaffRegistrationSerializer
 from users.models import VoterProfile
 from invitations.models import Invitation
@@ -80,6 +82,18 @@ class AdminStaffRegistrationView(APIView):
             serializer.errors,
             status=status.HTTP_400_BAD_REQUEST
         )
+
+
+class CustomLoginView(LoginView):
+    """
+    """
+    def dispatch(self, request, *args, **kwargs):
+        """
+        """
+        print("CustomLoginView dispatch called - user authenticated:", request.user.is_authenticated)
+        if request.user.is_authenticated:
+            return redirect("home")
+        return super().dispatch(request, *args, **kwargs)
 
 
 class LogoutAnyMethodView(View):
