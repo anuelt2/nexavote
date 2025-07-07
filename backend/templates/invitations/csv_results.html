@@ -1,0 +1,84 @@
+"""
+{% extends 'base.html' %}
+
+{% block title %}CSV Upload Results - {{ election_event.title }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>CSV Upload Results</h2>
+    <h4>Election Event: {{ election_event.title }}</h4>
+    
+    {% if results %}
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Processing Summary</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="card text-center">
+                                    <div class="card-body">
+                                        <h5 class="card-title">{{ results.total_rows }}</h5>
+                                        <p class="card-text">Total Rows</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card text-center border-success">
+                                    <div class="card-body">
+                                        <h5 class="card-title text-success">{{ results.successful_invitations }}</h5>
+                                        <p class="card-text">Successful Invitations</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card text-center border-danger">
+                                    <div class="card-body">
+                                        <h5 class="card-title text-danger">{{ results.failed_invitations }}</h5>
+                                        <p class="card-text">Failed Invitations</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card text-center border-warning">
+                                    <div class="card-body">
+                                        <h5 class="card-title text-warning">{{ results.duplicate_emails }}</h5>
+                                        <p class="card-text">Duplicate Emails</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                {% if results.errors %}
+                    <div class="card mt-3">
+                        <div class="card-header">
+                            <h5>Errors</h5>
+                        </div>
+                        <div class="card-body">
+                            <ul class="list-group list-group-flush">
+                                {% for error in results.errors %}
+                                    <li class="list-group-item">{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    {% else %}
+        <div class="alert alert-info">
+            No results to display.
+        </div>
+    {% endif %}
+    
+    <div class="mt-3">
+        <a href="{% url 'invitations:csv-upload' election_event.id %}" class="btn btn-primary">Upload Another CSV</a>
+        <a href="{% url 'elections:event-detail' election_event.id %}" class="btn btn-secondary">Back to Election Event</a>
+    </div>
+</div>
+{% endblock %}
+"""

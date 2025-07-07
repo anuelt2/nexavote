@@ -1,4 +1,6 @@
 """
+core/views.py
+Django views for the NexaVote Electronic Voting Platform.
 """
 from django.views.generic import TemplateView
 

@@ -9,9 +9,11 @@ to control voter registration access.
 """
 import uuid
 from django.db import models
-
+from django.contrib.auth import get_user_model
 from core.models import BaseUUIDModel
 from election_events.models import ElectionEvent
+
+User = get_user_model()
 
 
 class Invitation(BaseUUIDModel):
@@ -25,6 +27,15 @@ class Invitation(BaseUUIDModel):
         ElectionEvent,
         on_delete=models.CASCADE,
         related_name='invitations'
+    )
+    first_name = models.CharField(max_length=50, blank=True)
+    last_name = models.CharField(max_length=50, blank=True)
+    invited_by = models.ForeignKey(
+        User, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        related_name='sent_invitations'
     )
 
     def __str__(self):
