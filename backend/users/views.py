@@ -6,7 +6,6 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.utils.decorators import method_decorator
 from django.shortcuts import render, redirect
 from django.views import View
-from django.contrib.auth.forms import UserCreationForm
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
