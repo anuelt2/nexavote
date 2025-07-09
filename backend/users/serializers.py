@@ -4,8 +4,9 @@ Django REST Framework serializers for user registration.
 This module contains serializers for handling user registration via invitation tokens
 and direct admin/staff registration.
 """
-from rest_framework import serializers
 from django.contrib.auth import get_user_model
+
+from rest_framework import serializers
 
 from invitations.models import Invitation
 from users.models import User, VoterProfile
@@ -72,53 +73,77 @@ class RegisterViaTokenSerializer(serializers.Serializer):
         return user
 
 
-class AdminStaffRegistrationSerializer(serializers.ModelSerializer):
+class CurrentUserSerializer(serializers.ModelSerializer):
     """
-    Serializer for direct registration of admin and staff users.
+    """
+    voter_profile = serializers.SerializerMethodField()
 
-    This serializer allows admins and staff to register directly,
-    without requiring an invitation token.
-    """
     class Meta:
         model = User
-        fields = ["email", "first_name", "last_name", "password", "role"]
-        extra_kwargs = {"password": {"write_only": True}, "role": {"required": True}}
+        fields = ['id', 'email', 'first_name', 'last_name', 'is_staff', 'voter_profile']
+    
+    def get_voter_profile(self,obj):
+        try:
+            profile = obj.voterprofile
+            return {
+                'id': str(profile.id),
+                'election_event': profile.election_event.title
+            }
+        except VoterProfile.DoesNotExist:
+            return None
 
-    def validate_role(self, value):
-        """
-        Validate that only admin or staff roles can be registered directly.
 
-        Args:
-            value (str): The proposed user role
+# class AdminStaffRegistrationSerializer(serializers.ModelSerializer):
+#     """
+#     Serializer for direct registration of admin and staff users.
 
-        Returns:
-            str: The validated role
+#     This serializer allows admins and staff to register directly,
+#     without requiring an invitation token.
+#     """
+#     class Meta:
+#         model = User
+#         fields = ["email", "first_name", "last_name", "password", "role"]
+#         extra_kwargs = {"password": {"write_only": True}, "role": {"required": True}}
 
-        Raises:
-            ValidationError: If an invalid role is specified
-        """
-        if value not in ["admin", "staff"]:
-            raise serializers.ValidationError(
-                "Only admin and staff can register directly."
-            )
-        return value
+#     def validate_role(self, value):
+#         """
+#         Validate that only admin or staff roles can be registered directly.
 
-    def create(self, validated_data):
-        """
-        Create a new admin or staff user.
+#         Args:
+#             value (str): The proposed user role
 
-        Args:
-            validated_data (dict): Validated registration data
+#         Returns:
+#             str: The validated role
 
-        Returns:
-            User: The newly created admin or staff user
-        """
-        user = User.objects.create_user(
-            email=validated_data["email"],
-            password=validated_data["password"],
-            first_name=validated_data["first_name"],
-            last_name=validated_data["last_name"],
-            role=validated_data["role"],
-            is_staff=validated_data["role"] == "staff",
-        )
-        return user
+#         Raises:
+#             ValidationError: If an invalid role is specified
+#         """
+#         if value not in ["admin", "staff"]:
+#             raise serializers.ValidationError(
+#                 "Only admin and staff roles are allowed."
+#             )
+#         return value
+
+    # def create(self, validated_data):
+    #     """
+    #     Create a new admin or staff user.
+
+    #     Args:
+    #         validated_data (dict): Validated registration data
+
+    #     Returns:
+    #         User: The newly created admin or staff user
+    #     """
+    #     role = validated_data['role']
+    #     is_staff = role in ['admin', 'staff']
+
+    #     user = User.objects.create_user(
+    #         email=validated_data['email'],
+    #         password=validated_data['password'],
+    #         first_name=validated_data['first_name'],
+    #         last_name=validated_data['last_name'],
+    #         role=role,
+    #         is_staff=is_staff,
+    #         is_superuser=(role == 'admin'),
+    #     )
+    #     return user

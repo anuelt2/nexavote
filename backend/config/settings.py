@@ -40,7 +40,9 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 
     # Thirdparty apps
+    'django_filters',
     'rest_framework',
+    'rest_framework.authtoken',
     'django_extensions',
     'drf_yasg',
 
@@ -142,6 +144,13 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Custom user model
 AUTH_USER_MODEL = 'users.User'
+
+# REST Framework Settings
+REST_FRAMEWORK = {
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': "10/min",
+    }
+}
 
 # Email Configuration
 EMAIL_BACKEND = config('EMAIL_BACKEND')

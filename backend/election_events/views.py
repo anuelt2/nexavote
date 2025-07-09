@@ -4,19 +4,22 @@ election_events/views.py
 This module defines views for the election_events application.
 Contains both API views and HTML template views for election event management.
 """
-from django.views.generic import View
-from django.shortcuts import render, get_object_or_404, redirect
-from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.admin.views.decorators import staff_member_required
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.shortcuts import render, get_object_or_404, redirect
 from django.utils.decorators import method_decorator
+from django.views.generic import View
 
-from rest_framework import generics
+from rest_framework import generics, permissions
 
 from election_events.forms import ElectionEventForm
 from election_events.models import ElectionEvent
 from election_events.serializers import ElectionEventSerializer
 from users.models import VoterProfile
+from users.permissions import IsVoter, IsElectionAdmin
 
+
+# === API Views ===
 
 class ElectionEventListView(generics.ListAPIView):
     """
@@ -31,7 +34,55 @@ class ElectionEventListView(generics.ListAPIView):
     """
     queryset = ElectionEvent.objects.all()
     serializer_class = ElectionEventSerializer
+    permission_classes = [permissions.IsAuthenticated, IsElectionAdmin]
 
+
+class ElectionEventDetailView(generics.RetrieveAPIView):
+    """
+    """
+    queryset = ElectionEvent.objects.all()
+    serializer_class = ElectionEventSerializer
+    permission_class = [permissions.IsAuthenticated, IsElectionAdmin]
+
+
+class ElectionEventVoterView(generics.RetrieveAPIView):
+    """
+    """
+    serializer_class = ElectionEventSerializer
+    permission_classes = [permissions.IsAuthenticated, IsVoter]
+
+    def get_object(self):
+        voter = VoterProfile.objects.get(user=self.request.user)
+        return voter.election_event
+
+
+class ElectionEventCreateAPIView(generics.CreateAPIView):
+    """
+    """
+    queryset = ElectionEvent.objects.all()
+    serializer_class = ElectionEventSerializer
+    permission_classes = [permissions.IsAuthenticated, IsElectionAdmin]
+
+
+class ElectionEventUpdateView(generics.RetrieveUpdateAPIView):
+    """
+    """
+    queryset = ElectionEvent.objects.all()
+    serializer_class = ElectionEventSerializer
+    permission_classes = [permissions.IsAuthenticated, IsElectionAdmin]
+    lookup_field = 'pk'
+
+
+class ElectionEventDeleteView(generics.DestroyAPIView):
+    """
+    """
+    queryset = ElectionEvent.objects.all()
+    serializer_class = ElectionEventSerializer
+    permission_classes = [permissions.IsAuthenticated, IsElectionAdmin]
+    lookup_field = 'pk'
+
+
+# === Template Views ===
 
 class VoterElectionEventDetailView(LoginRequiredMixin, View):
     """

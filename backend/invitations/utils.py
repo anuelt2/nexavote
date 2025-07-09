@@ -17,7 +17,7 @@ def send_invite_email(invitation, use_api=False):
         if use_api:
             registration_url = f"{base_url}/api/register/?token={invitation.token}"
         else:
-            registration_url = f"{base_url}/auth/register/voter/html?token={invitation.token}"
+            registration_url = f"{base_url}/auth/register/voter/?token={invitation.token}"
 
         context = {
             'election_title': invitation.election_event.title,

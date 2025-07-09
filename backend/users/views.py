@@ -4,30 +4,35 @@ Django views module for user registration and authentication.
 This module contains view classes for handling user registration via invitation tokens,
 admin/staff registration, logout functionality, and voter management.
 """
-from django.contrib.auth import get_user_model, login, logout
-from django.contrib.auth.views import LoginView
 from django.contrib.admin.views.decorators import staff_member_required
-from django.utils.decorators import method_decorator
+from django.contrib.auth import get_user_model, login, logout, authenticate
+from django.contrib.auth.views import LoginView
 from django.shortcuts import render, redirect
+from django.urls import reverse
+from django.utils.decorators import method_decorator
 from django.views import View
 
-from rest_framework.views import APIView
-from rest_framework.response import Response
 from rest_framework import status, permissions
+from rest_framework.authtoken.models import Token
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
-from users.serializers import RegisterViaTokenSerializer, AdminStaffRegistrationSerializer
-from users.models import VoterProfile
 from invitations.models import Invitation
 from users.forms import VoterRegistrationForm
+from users.models import VoterProfile
+from users.serializers import RegisterViaTokenSerializer, CurrentUserSerializer
 
 
 User = get_user_model()
 
 
+# === API Views ===
+
 class RegisterViaTokenView(APIView):
     """
     API endpoint to register a voter via a one-time invitation token.
     """
+    permission_classes = [permissions.AllowAny]
     
     def post(self, request):
         """
@@ -52,55 +57,99 @@ class RegisterViaTokenView(APIView):
         )
 
 
-class AdminStaffRegistrationView(APIView):
+class LoginAPIView(APIView):
     """
-    API view to handle direct registration for admin and staff users.
-    
-    This view allows administrators to create admin and staff accounts
-    without using an invitation token.
     """
-    permission_classes = [permissions.IsAdminUser]  # Only admins can create admin/staff accounts
-    
     def post(self, request):
-        """
-        Process admin or staff user registration.
-        
-        Args:
-            request (Request): The HTTP request object
-        
-        Returns:
-            Response: Registration success or error response
-        """
-        serializer = AdminStaffRegistrationSerializer(data=request.data)
-        if serializer.is_valid():
-            user = serializer.save()
-            return Response(
-                {"message": "Admin/Staff registration successful"},
-                status=status.HTTP_201_CREATED
-            )
-        return Response(
-            serializer.errors,
-            status=status.HTTP_400_BAD_REQUEST
-        )
+        email = request.data.get('email')
+        password = request.data.get('password')
+        user = authenticate(request, username=email, password=password)
+
+        if user is not None:
+            token, _ = Token.objects.get_or_create(user=user)
+            return Response({'token': token.key}, status=status.HTTP_200_OK)
+        return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
 
 
-class CustomLoginView(LoginView):
+class LogoutAPIView(APIView):
     """
     """
-    def dispatch(self, request, *args, **kwargs):
-        """
-        """
-        print("CustomLoginView dispatch called - user authenticated:", request.user.is_authenticated)
-        if request.user.is_authenticated:
-            return redirect("home")
-        return super().dispatch(request, *args, **kwargs)
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        try:
+            request.user.auth_token.delete()
+        except Exception:
+            pass
+        return Response({"detail": "Logged out successfully."}, status=status.HTTP_200_OK)
 
 
-class LogoutAnyMethodView(View):
+class CurrentUserView(APIView):
+    """
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        """
+        """
+        serializer = CurrentUserSerializer(request.user)
+        return Response(serializer.data)
+
+
+# class AdminStaffRegistrationView(APIView):
+#     """
+#     API view to handle direct registration for admin and staff users.
+    
+#     This view allows administrators to create admin and staff accounts
+#     without using an invitation token.
+#     """
+#     permission_classes = [permissions.IsAdminUser]
+    
+#     def post(self, request):
+#         """
+#         Process admin or staff user registration.
+        
+#         Args:
+#             request (Request): The HTTP request object
+        
+#         Returns:
+#             Response: Registration success or error response
+#         """
+#         serializer = AdminStaffRegistrationSerializer(data=request.data)
+#         if serializer.is_valid():
+#             user = serializer.save()
+#             return Response(
+#                 {"message": "Admin/Staff registration successful"},
+#                 status=status.HTTP_201_CREATED
+#             )
+#         return Response(
+#             serializer.errors,
+#             status=status.HTTP_400_BAD_REQUEST
+#         )
+
+
+# === Template Views ===
+
+class LoginView(LoginView):
+    """
+    Custom login view.
+    Redirects authenticated users away from login page
+    """
+    template_name = "registration/login.html"
+    redirect_authenticated_user = True
+
+    def get_success_url(self):
+        user = self.request.user
+        if user.is_staff:
+            return reverse('admin-elections')
+        else:
+            return reverse('election-list')
+
+
+class LogoutView(View):
     """
     View to handle logout for any HTTP method and redirect to home.
     """
-    
     def dispatch(self, request, *args, **kwargs):
         """
         Handle logout for any HTTP method.
@@ -124,7 +173,6 @@ class RegisterViaTokenHTMLView(View):
     Provides GET and POST methods to display and process the voter
     registration form using invitation tokens.
     """
-    
     def get(self, request):
         """
         Display voter registration form with token validation.
@@ -197,7 +245,6 @@ class VoterListView(View):
     """
     View to display a list of all voters (staff access required).
     """
-    
     @method_decorator(staff_member_required)
     def get(self, request):
         """
