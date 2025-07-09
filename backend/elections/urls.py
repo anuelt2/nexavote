@@ -6,9 +6,6 @@ This module defines the URL patterns for election and candidate related views.
 """
 from django.urls import path
 from elections.views import (
-    ElectionListView, CandidateListView,
-    ElectionAdminCreateView, ElectionAdminDetailView,
-    CandidateAdminCreateView, CandidateAdminDetailView,
     VoterElectionListView, VoterElectionDetailView,
     AdminElectionResultsView, CandidateCreateView,
     ElectionCreateView, AdminElectionListView
@@ -16,23 +13,14 @@ from elections.views import (
 
 
 urlpatterns = [
-    # Voter API routes
-    path('elections/voter/', ElectionListView.as_view(), name='election-list'),
-    path('candidates/', CandidateListView.as_view(), name='candidate-list'),
-
-    # Admin API routes
-    path('elections/admin/', ElectionAdminCreateView.as_view(), name='election-admin-create'),
-    path('elections/admin/<uuid:pk>/', ElectionAdminDetailView.as_view(), name='election-admin-detail'),
-
-    path('candidates/admin', CandidateAdminCreateView.as_view(), name='candidate-admin-create'),
-    path('candidates/admin/<uuid:pk>/', CandidateAdminDetailView.as_view(), name='candidate-admin-detail'),
-
-    # HTML templates routes
-    path('elections/', VoterElectionListView.as_view(), name='election-list'),
-    path('elections/<uuid:pk>/', VoterElectionDetailView.as_view(), name='election-detail'),
-    path('elections/admin/results/', AdminElectionResultsView.as_view(), name='election-results'),
+    # Admin Template views
+    path('elections/admin/results/', AdminElectionResultsView.as_view(), name='admin-results'),
     path('elections/admin/<uuid:election_id>/add-candidate/', CandidateCreateView.as_view(), name='add-candidate'),
     path('elections/admin/add-election/', ElectionCreateView.as_view(), name='add-election'),
     path('elections/admin/add-election/<uuid:event_id>/', ElectionCreateView.as_view(), name='add-election-for-election-event'),
-    path('elections/admin/elections/', AdminElectionListView.as_view(), name='admin-elections'),
+    path('elections/admin/dashboard/', AdminElectionListView.as_view(), name='admin-dashboard'),
+
+    # Voter Template views
+    path('my-elections/', VoterElectionListView.as_view(), name='election-list'),
+    path('vote/<uuid:pk>/', VoterElectionDetailView.as_view(), name='vote-page'),
 ]

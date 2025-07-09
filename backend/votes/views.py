@@ -1,25 +1,38 @@
 """
 votes/views.py
+
 Views for handling vote-related operations including casting votes,
 viewing results, and managing vote audit logs.
 """
-from rest_framework import generics, status, permissions
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.response import Response
-from django.shortcuts import get_object_or_404
-from django.db.models import Count, Q
 from django.core.exceptions import ValidationError
+from django.db.models import Count, Q
+from django.shortcuts import get_object_or_404
+from django.utils import timezone
 
-from .models import Vote, VoteAuditLog
-from .serializers import (
-    VoteCastSerializer, VoteDetailSerializer, VoteResultSerializer,
-    ElectionResultsSerializer, VoterParticipationSerializer,
-    VoteAuditLogSerializer, VoteVerificationSerializer
-)
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.filters import OrderingFilter
+from rest_framework import generics, status, permissions
+from rest_framework.decorators import api_view, permission_classes, throttle_classes
+from rest_framework.response import Response
+from rest_framework.throttling import AnonRateThrottle
+
 from elections.models import Election, ElectionEvent
+from elections.serializers import ElectionSerializer
 from users.models import VoterProfile
 from users.permissions import IsVoter, IsElectionAdmin
+from votes.models import Vote, VoteAuditLog
+from votes.serializers import (
+    VoteCastSerializer,
+    VoteDetailSerializer,
+    VoteResultSerializer,
+    ElectionResultsSerializer,
+    VoterParticipationSerializer,
+    VoteAuditLogSerializer,
+    VoteVerificationSerializer
+)
 
+
+# ===API Views ===
 
 class CastVoteView(generics.CreateAPIView):
     """
@@ -34,6 +47,8 @@ class CastVoteView(generics.CreateAPIView):
         Create vote and log the action.
         """
         vote = serializer.save()
+        print("=== perform_create called ===")
+        print("Creating audit log for vote ID", vote.id)
         
         # Create audit log
         VoteAuditLog.objects.create(
@@ -56,6 +71,32 @@ class CastVoteView(generics.CreateAPIView):
         return ip
 
 
+class VoteDetailView(generics.RetrieveAPIView):
+    """
+    API view for getting vote details.
+    Voters can only see their own votes, admins can see all votes.
+    """
+    serializer_class = VoteDetailSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_queryset(self):
+        """
+        Return appropriate queryset based on user permissions.
+        """
+        if self.request.user.is_staff:
+            return Vote.objects.all()
+        else:
+            try:
+                voter = VoterProfile.objects.get(user=self.request.user)
+                return Vote.objects.filter(voter=voter).select_related(
+                    'candidate',
+                    'candidate__election',
+                    'voter__user'
+                )
+            except VoterProfile.DoesNotExist:
+                return Vote.objects.none()
+
+
 class VoterVotesListView(generics.ListAPIView):
     """
     API view for listing votes cast by the authenticated voter.
@@ -69,9 +110,15 @@ class VoterVotesListView(generics.ListAPIView):
         """
         try:
             voter = VoterProfile.objects.get(user=self.request.user)
-            return Vote.objects.filter(voter=voter).select_related(
+            queryset =  Vote.objects.filter(voter=voter).select_related(
                 'candidate', 'candidate__election', 'voter__user'
-            )
+            ).order_by('-created_at')
+            
+            election_id = self.request.query_params.get('election_id')
+            if election_id:
+                queryset = queryset.filter(candidate__election__id=election_id)
+            
+            return queryset
         except VoterProfile.DoesNotExist:
             return Vote.objects.none()
 
@@ -92,8 +139,7 @@ class ElectionResultsView(generics.RetrieveAPIView):
         election = get_object_or_404(Election, id=election_id)
         
         # Check if user can view results
-        if not (election.has_ended() or 
-                self.request.user.groups.filter(name='ElectionAdmins').exists()):
+        if not timezone.now() > election.end_time or not self.request.user.is_staff:
             self.permission_denied(
                 self.request,
                 message="Results not available yet."
@@ -157,6 +203,7 @@ class VoteAuditLogListView(generics.ListAPIView):
     """
     serializer_class = VoteAuditLogSerializer
     permission_classes = [permissions.IsAuthenticated, IsElectionAdmin]
+    filter_backends = [DjangoFilterBackend, OrderingFilter]
     filterset_fields = ['action', 'vote__candidate__election']
     ordering = ['-created_at']
     
@@ -170,30 +217,35 @@ class VoteAuditLogListView(generics.ListAPIView):
         )
 
 
-class VoteDetailView(generics.RetrieveAPIView):
+class ElectionsAvailableView(generics.ListAPIView):
     """
-    API view for getting vote details.
-    Voters can only see their own votes, admins can see all votes.
+    API view for listing elections a voter can still vote in.
     """
-    serializer_class = VoteDetailSerializer
-    permission_classes = [permissions.IsAuthenticated]
-    
+    serializer_class = ElectionSerializer
+    permission_classes = [permissions.IsAuthenticated, IsVoter]
+
     def get_queryset(self):
-        """
-        Return appropriate queryset based on user permissions.
-        """
-        if self.request.user.groups.filter(name='ElectionAdmins').exists():
-            return Vote.objects.all()
-        else:
-            try:
-                voter = VoterProfile.objects.get(user=self.request.user)
-                return Vote.objects.filter(voter=voter)
-            except VoterProfile.DoesNotExist:
-                return Vote.objects.none()
+        user = self.request.user
+        try:
+            voter = VoterProfile.objects.get(user=user)
+        except VoterProfile.DoesNotExist:
+            return Election.objects.none()
+        
+        voted_election_ids = Vote.objects.filter(
+            voter=voter
+        ).values_list('candidate__election_id', flat=True)
+
+        return Election.objects.filter(
+            election_event=voter.election_event,
+            is_active=True,
+            start_time__lte=timezone.now(),
+            end_time__gte=timezone.now()
+        ).exclude(id__in=voted_election_ids)
 
 
 @api_view(['POST'])
-@permission_classes([permissions.IsAuthenticated])
+@permission_classes([])
+@throttle_classes([AnonRateThrottle])
 def verify_vote(request):
     """
     API endpoint for verifying a vote using its hash.
@@ -221,7 +273,7 @@ def verify_vote(request):
 
 
 @api_view(['GET'])
-@permission_classes([permissions.IsAuthenticated])
+@permission_classes([permissions.IsAuthenticated, IsVoter])
 def check_vote_status(request, election_id):
     """
     Check if the authenticated user has voted in a specific election.
@@ -239,8 +291,9 @@ def check_vote_status(request, election_id):
             'has_voted': vote_exists,
             'election_id': election.id,
             'election_title': election.title,
-            'election_status': election.get_status_display() if hasattr(election, 'get_status_display') else 'active'
-        })
+            'election_status': (election.get_status_display()
+                    if hasattr(election, 'get_status_display') else 'active')
+        })  # modify election model to add choices later
         
     except VoterProfile.DoesNotExist:
         return Response({
@@ -252,52 +305,55 @@ def check_vote_status(request, election_id):
 @permission_classes([permissions.IsAuthenticated, IsElectionAdmin])
 def election_statistics(request, election_id):
     """
-    Get detailed statistics for a specific election.
+    Get detailed vote statistics for a specific election. Admins only.
     """
     election = get_object_or_404(Election, id=election_id)
-    
-    # Basic vote counts
-    total_votes = Vote.objects.filter(
-        candidate__election=election,
-        is_verified=True
-    ).count()
-    
-    # Votes by candidate
-    candidate_votes = Vote.objects.filter(
-        candidate__election=election,
-        is_verified=True
-    ).values(
-        'candidate__first_name',
-        'candidate__last_name'
-    ).annotate(
-        vote_count=Count('id')
-    ).order_by('-vote_count')
+
+    base_qs = Vote.objects.filter(candidate__election=election, is_verified=True)
+
+    # Total Votes Cast in Specific Election
+    total_votes = base_qs.count()
+
+    # Total Votes Cast Per Candidate
+    candidate_votes = (
+        base_qs
+        .values('candidate__id', 'candidate__first_name', 'candidate__last_name')
+        .annotate(vote_count=Count('id'))
+        .order_by('-vote_count')
+    )
     
     # Voting timeline (votes per hour/day)
-    from django.db.models.functions import TruncHour
-    voting_timeline = Vote.objects.filter(
-        candidate__election=election,
-        is_verified=True
-    ).annotate(
-        hour=TruncHour('created_at')
-    ).values('hour').annotate(
-        vote_count=Count('id')
-    ).order_by('hour')
+    from django.db.models.functions import TruncHour, TruncDay
+
+    granularity = request.query_params.get('granularity', 'hour')
+    trunc_fn = TruncDay if granularity == 'day' else TruncHour
+
+    voting_timeline = (
+        base_qs
+        .annotate(bucket=trunc_fn('created_at', tzinfo=timezone.get_current_timezone()))
+        .values('bucket')
+        .annotate(vote_count=Count('id'))
+        .order_by('bucket')
+    )
+
+    for point in voting_timeline:
+        point['bucket'] = point['bucket'].isoformat()
+    
+    # Check For Unverified Votes Count
+    verified_votes = total_votes
+    unverified_votes = (
+        Vote.objects.filter(candidate__election=election, is_verified=False)
+        .count()
+    )
     
     return Response({
-        'election_id': election.id,
+        'election_id': str(election.id),
         'election_title': election.title,
-        'total_votes': total_votes,
+        'total_votes': verified_votes + unverified_votes,
         'candidate_results': list(candidate_votes),
         'voting_timeline': list(voting_timeline),
         'verification_stats': {
-            'verified_votes': Vote.objects.filter(
-                candidate__election=election, 
-                is_verified=True
-            ).count(),
-            'unverified_votes': Vote.objects.filter(
-                candidate__election=election, 
-                is_verified=False
-            ).count()
-        }
+            'verified_votes': verified_votes,
+            'unverified_votes': unverified_votes,
+        },
     })

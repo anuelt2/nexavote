@@ -3,29 +3,39 @@ votes/urls.py
 URL configuration for vote-related endpoints.
 """
 from django.urls import path
-from . import views
+from votes.views import (
+    CastVoteView,
+    VoterVotesListView,
+    VoteDetailView,
+    VoteAuditLogListView,
+    ElectionResultsView,
+    ElectionEventParticipationView,
+    ElectionsAvailableView,
+    check_vote_status,
+    verify_vote,
+    election_statistics
+)
 
 app_name = 'votes'
 
 urlpatterns = [
-    # Vote casting
-    path('', views.CastVoteView.as_view(), name='cast-vote'),
+    # Vote Casting & Management
+    path('', CastVoteView.as_view(), name='cast-vote'),
+    path('my-votes/', VoterVotesListView.as_view(), name='my-votes'),
+    path('<uuid:pk>/', VoteDetailView.as_view(), name='vote-detail'),
     
-    # Vote management
-    path('my-votes/', views.VoterVotesListView.as_view(), name='my-votes'),
-    path('<uuid:pk>/', views.VoteDetailView.as_view(), name='vote-detail'),
+    # Vote Verification
+    path('verify/', verify_vote, name='verify-vote'),
+    path('check-status/<uuid:election_id>/', check_vote_status, name='check-vote-status'),
     
-    # Vote verification
-    path('verify/', views.verify_vote, name='verify-vote'),
-    path('check-status/<uuid:election_id>/', views.check_vote_status, name='check-vote-status'),
+    # Election Results and Statistics
+    path('results/<uuid:election_id>/', ElectionResultsView.as_view(), name='election-results'),
+    path('statistics/<uuid:election_id>/', election_statistics, name='election-statistics'),
     
-    # Election results and statistics
-    path('results/<uuid:election_id>/', views.ElectionResultsView.as_view(), name='election-results'),
-    path('statistics/<uuid:election_id>/', views.election_statistics, name='election-statistics'),
+    # Election Event Participation
+    path('participation/<uuid:event_id>/', ElectionEventParticipationView.as_view(), name='event-participation'),
+    path('elections-available/', ElectionsAvailableView.as_view(), name='elections-available'),
     
-    # Election event participation
-    path('participation/<uuid:event_id>/', views.ElectionEventParticipationView.as_view(), name='event-participation'),
-    
-    # Audit logs
-    path('audit-logs/', views.VoteAuditLogListView.as_view(), name='audit-logs'),
+    # Audit Logs
+    path('audit-logs/', VoteAuditLogListView.as_view(), name='audit-logs'),
 ]

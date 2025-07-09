@@ -4,17 +4,23 @@ Django views for invitation management.
 This module contains view classes for creating and managing voter invitations
 via both API and HTML interfaces.
 """
-from django.views import View
 from django.contrib import messages
 from django.contrib.admin.views.decorators import staff_member_required
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.utils.decorators import method_decorator
-from rest_framework import generics, permissions
+from django.views import View
+
+from rest_framework import generics, permissions, status
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
 from invitations.forms import InvitationForm
 from invitations.models import Invitation
-from invitations.serializers import InvitationCreateSerializer
+from invitations.serializers import InvitationCreateSerializer, InvitationListSerializer
 from invitations.utils import send_invite_email
 
+
+# === API Views ===
 
 class InvitationCreateAPIView(generics.CreateAPIView):
     """
@@ -37,14 +43,63 @@ class InvitationCreateAPIView(generics.CreateAPIView):
         send_invite_email(invitation, use_api=True)
 
 
+class InvitationListCreateView(generics.ListCreateAPIView):
+    """
+    """
+    queryset = Invitation.objects.all()
+    serializer_class = InvitationListSerializer
+    permission_classes = [permissions.IsAdminUser]
+
+
+class InvitationDetailView(generics.RetrieveAPIView):
+    """
+    """
+    queryset = Invitation.objects.all()
+    serializer_class = InvitationListSerializer
+    permission_classes = [permissions.IsAdminUser]
+
+
+class InvitationsByEventView(generics.ListAPIView):
+    """
+    """
+    serializer_class = InvitationListSerializer
+
+    def get_queryset(self):
+        event_id = self.kwargs['event_id']
+        return Invitation.objects.filter(election_event_id=event_id)
+
+
+class InvitationMarkUsedView(APIView):
+    """
+    """
+    def patch(self, request, pk):
+        invitation = get_object_or_404(Invitation, pk=pk)
+        if invitation.is_used:
+            return Response({'detail': 'Invitation already marked as used.'}, status=status.HTTP_404_BAD_REQUEST)
+        
+        invitation.is_used = True
+        invitation.save()
+        return Response({'detail': 'Invitation marked as used.'}, status=status.HTTP_200_OK)
+
+
+class InvitationByTokenView(generics.RetrieveAPIView):
+    """
+    Get and verify inivitaiton details via token before registration proceeds.
+    """
+    serializer_class = InvitationListSerializer
+    lookup_field = 'token'
+    queryset = Invitation.objects.all()
+
+
+# === Template Views ===
+
+@method_decorator(staff_member_required, name='dispatch')
 class InvitationCreateView(View):
     """
     HTML view for creating voter invitations.
     
     Provides form-based interface for staff members to create invitations.
     """
-    
-    @method_decorator(staff_member_required)
     def get(self, request):
         """
         Display invitation creation form.
@@ -58,7 +113,6 @@ class InvitationCreateView(View):
         form = InvitationForm()
         return render(request, "invitations/invite.html", {"form": form})
     
-    @method_decorator(staff_member_required)
     def post(self, request):
         """
         Process invitation creation form submission.
@@ -92,4 +146,4 @@ class InvitationCreateView(View):
         else:
             messages.error(request, "Error with submission. Please check form and try again.")
             empty_form = InvitationForm()
-            return render(request, "invitations/invite.html", {"form": empty_form})
+            return render(request, "invitations/invite.html", {"form": form})

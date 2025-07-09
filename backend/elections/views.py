@@ -17,37 +17,187 @@ from rest_framework import generics, permissions
 
 from elections.forms import CandidateForm, ElectionForm
 from elections.models import Election, Candidate
-from elections.serializers import ElectionSerializer, CandidateSerializer
 from election_events.models import ElectionEvent
+from elections.serializers import ElectionSerializer, CandidateSerializer
 from users.models import VoterProfile
+from users.permissions import IsElectionAdmin
 from votes.models import Vote
+
+
+# === API Views ===
+
+class ElectionCreateAPIView(generics.CreateAPIView):
+    """
+    API view for creating new elections (admin only).
+    
+    This view allows administrators to create new elections via POST requests.
+    
+    Attributes:
+        queryset: All Election objects
+        serializer_class: ElectionSerializer for JSON serialization
+        permission_classes: Requires admin privileges
+    """
+    queryset = Election.objects.all()
+    serializer_class = ElectionSerializer
+    permission_classes = [permissions.IsAuthenticated, IsElectionAdmin]
 
 
 class ElectionListView(generics.ListAPIView):
     """
-    API view for listing elections within a specific election event.
+    API view for listing all elections for Admin only and a voter's elections.
     
     This view provides a read-only endpoint that returns a list of elections.
-    It can be filtered by election event ID via query parameters.
     
     Attributes:
         serializer_class: ElectionSerializer for JSON serialization
         permission_classes: Requires authentication
     """
+    queryset = Election.objects.select_related('election_event')
     serializer_class = ElectionSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
         """
-        Get the queryset of elections, optionally filtered by election event.
+        Get the queryset of elections.
         
         Returns:
-            QuerySet: Elections filtered by event ID if provided, otherwise all elections
+            QuerySet: All elections for admin or voter's elections.
         """
-        event_id = self.request.query_params.get('event')
-        if event_id:
-            return Election.objects.filter(election_event__id=event_id)
-        return Election.objects.all()
+        user = self.request.user
+        if user.is_staff:
+            return self.queryset.all()
+        try:
+            voter = VoterProfile.objects.get(user=user)
+            return self.queryset.filter(election_event=voter.election_event)
+        except VoterProfile.DoesNotExist:
+            return Election.objects.none()
+
+
+class ElectionRetrieveAPIView(generics.RetrieveAPIView):
+    """
+    API view for retrieving details of a specific election.
+    - Admins can retrieve any election.
+    - Voters can retrieve any election from their election event.
+    """
+    queryset = Election.objects.select_related('election_event')
+    serializer_class = ElectionSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    llokup_field = 'pk'
+
+    def get_queryset(self):
+        """
+        Get the queryset of elections.
+        
+        Returns:
+            QuerySet: A particular election.
+        """
+        user = self.request.user
+        if user.is_staff:
+            return self.queryset.all()
+        try:
+            voter = VoterProfile.objects.get(user=user)
+            return self.queryset.filter(election_event=voter.election_event)
+        except VoterProfile.DoesNotExist:
+            return Election.objects.none()
+
+
+class ElectionUpdateAPIView(generics.UpdateAPIView):
+    """
+    API view for updating elections (admin only).
+    
+    This view allows administrators to perform CRUD operations on individual elections.
+    
+    Attributes:
+        queryset: All Election objects
+        serializer_class: ElectionSerializer for JSON serialization
+        permission_classes: Requires admin privileges
+    """
+    queryset = Election.objects.all()
+    serializer_class = ElectionSerializer
+    permission_classes = [permissions.IsAuthenticated, IsElectionAdmin]
+    lookup_field = 'pk'
+
+
+class ElectionDeleteAPIView(generics.DestroyAPIView):
+    """
+    API view for deleting elections (admin only).
+    
+    This view allows administrators to perform CRUD operations on individual elections.
+    
+    Attributes:
+        queryset: All Election objects
+        serializer_class: ElectionSerializer for JSON serialization
+        permission_classes: Requires admin privileges
+    """
+    queryset = Election.objects.all()
+    permission_classes = [permissions.IsAuthenticated, IsElectionAdmin]
+    lookup_field = 'pk'
+
+
+class CandidateAdminCreateView(generics.CreateAPIView):
+    """
+    API view for creating new candidates for a specific election (admin only).
+    
+    This view allows administrators to create new candidates via POST requests.
+    
+    Attributes:
+        queryset: Related Candidate objects
+        serializer_class: CandidateSerializer for JSON serialization
+        permission_classes: Requires admin privileges
+    """
+    queryset = Candidate.objects.select_related('election', 'user')
+    serializer_class = CandidateSerializer
+    permission_classes = [permissions.IsAuthenticated, IsElectionAdmin]
+
+
+class CandidateRetrieveAPIView(generics.RetrieveAPIView):
+    """
+    API view for retrieving candidates (admin only).
+    
+    This view allows administrators to perform CRUD operations on individual candidates.
+    
+    Attributes:
+        queryset: Related Candidate objects
+        serializer_class: CandidateSerializer for JSON serialization
+        permission_classes: Requires admin privileges
+    """
+    queryset = Candidate.objects.select_related('election', 'user')
+    serializer_class = CandidateSerializer
+    permission_classes = [permissions.IsAuthenticated, IsElectionAdmin]
+    lookup = 'pk'
+
+
+class CandidateUpdateAPIView(generics.UpdateAPIView):
+    """
+    API view for updating candidates (admin only).
+    
+    This view allows administrators to perform CRUD operations on individual candidates.
+    
+    Attributes:
+        queryset: Related Candidate objects
+        serializer_class: CandidateSerializer for JSON serialization
+        permission_classes: Requires admin privileges
+    """
+    queryset = Candidate.objects.select_related('election', 'user')
+    serializer_class = CandidateSerializer
+    permission_classes = [permissions.IsAuthenticated, IsElectionAdmin]
+    lookup = 'pk'
+
+
+class CandidateDeleteAPIView(generics.DestroyAPIView):
+    """
+    API view for deleting candidates (admin only).
+    
+    This view allows administrators to perform CRUD operations on individual candidates.
+    
+    Attributes:
+        queryset: Related Candidate objects
+        serializer_class: CandidateSerializer for JSON serialization
+        permission_classes: Requires admin privileges
+    """
+    queryset = Candidate.objects.select_related('election', 'user')
+    permission_classes = [permissions.IsAuthenticated, IsElectionAdmin]
+    lookup = 'pk'
 
 
 class CandidateListView(generics.ListAPIView):
@@ -63,6 +213,7 @@ class CandidateListView(generics.ListAPIView):
     """
     serializer_class = CandidateSerializer
     permission_classes = [permissions.IsAuthenticated]
+    lookup_field = 'election_id'
 
     def get_queryset(self):
         """
@@ -71,75 +222,13 @@ class CandidateListView(generics.ListAPIView):
         Returns:
             QuerySet: Candidates filtered by election ID if provided, otherwise all candidates
         """
-        election_id = self.request.query_params.get('election')
+        election_id = self.kwargs['election_id']
         if election_id:
             return Candidate.objects.filter(election__id=election_id)
-        return Candidate.objects.all()
-    
-
-class ElectionAdminCreateView(generics.CreateAPIView):
-    """
-    API view for creating new elections (admin only).
-    
-    This view allows administrators to create new elections via POST requests.
-    
-    Attributes:
-        queryset: All Election objects
-        serializer_class: ElectionSerializer for JSON serialization
-        permission_classes: Requires admin privileges
-    """
-    queryset = Election.objects.all()
-    serializer_class = ElectionSerializer
-    permission_classes = [permissions.IsAdminUser]
+        return Candidate.objects.none()
 
 
-class ElectionAdminDetailView(generics.RetrieveUpdateDestroyAPIView):
-    """
-    API view for retrieving, updating, and deleting elections (admin only).
-    
-    This view allows administrators to perform CRUD operations on individual elections.
-    
-    Attributes:
-        queryset: All Election objects
-        serializer_class: ElectionSerializer for JSON serialization
-        permission_classes: Requires admin privileges
-    """
-    queryset = Election.objects.all()
-    serializer_class = ElectionSerializer
-    permission_classes = [permissions.IsAdminUser]
-
-
-class CandidateAdminCreateView(generics.CreateAPIView):
-    """
-    API view for creating new candidates (admin only).
-    
-    This view allows administrators to create new candidates via POST requests.
-    
-    Attributes:
-        queryset: All Candidate objects
-        serializer_class: CandidateSerializer for JSON serialization
-        permission_classes: Requires admin privileges
-    """
-    queryset = Candidate.objects.all()
-    serializer_class = CandidateSerializer
-    permission_classes = [permissions.IsAdminUser]
-
-
-class CandidateAdminDetailView(generics.RetrieveUpdateDestroyAPIView):
-    """
-    API view for retrieving, updating, and deleting candidates (admin only).
-    
-    This view allows administrators to perform CRUD operations on individual candidates.
-    
-    Attributes:
-        queryset: All Candidate objects
-        serializer_class: CandidateSerializer for JSON serialization
-        permission_classes: Requires admin privileges
-    """
-    queryset = Candidate.objects.all()
-    serializer_class = CandidateSerializer
-    permission_classes = [permissions.IsAdminUser]
-
+# === Template Views ===
 
 class VoterElectionListView(LoginRequiredMixin, ListView):
     """

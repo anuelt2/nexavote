@@ -20,9 +20,9 @@
                         <div class="d-flex align-items-center gap-3">
                             {% if user.is_authenticated %}
                             <span class="me-2">Hello, {{ user.email }}</span>
-                            <a href="{% url 'custom-logout' %}" class="btn btn-light btn-sm">Logout</a>
+                            <a href="{% url 'logout' %}" class="btn btn-light btn-sm">Logout</a>
                             {% else %}
-                            <a href="{% url 'custom-login' %}" class="btn btn-light btn-sm">Login</a>
+                            <a href="{% url 'login' %}" class="btn btn-light btn-sm">Login</a>
                             {% endif %}
                             <button type="button" data-bs-toggle="collapse" data-bs-target="#mainNavbar" class="btn btn-outline-light btn-sm">
                                 <span class="navbar-toggler-icon"></span>
@@ -34,7 +34,7 @@
                         <ul class="nav flex-column bg-primary px-3 py-2 gap-2">
                             {% if user.is_authenticated %}
                             <li class="nav-item">
-                                <a href="{% url 'election-event-detail' %}" class="btn btn-outline-light text-start">Election Event</a>
+                                <a href="{% url 'voter-event-detail' %}" class="btn btn-outline-light text-start">Election Event</a>
                             </li>
                             <li class="nav-item">
                                 <a href="{% url 'election-list' %}" class="btn btn-outline-light text-start">Elections</a>
@@ -42,11 +42,11 @@
 
                             {% if user.is_staff %}
                             <li class="nav-item"><a href="{% url 'voter-list' %}" class="btn btn-outline-light text-start">Voters</a></li>
-                            <li class="nav-item"><a href="{% url 'election-results' %}" class="btn btn-outline-light text-start">Election Results</a></li>
+                            <li class="nav-item"><a href="{% url 'admin-results' %}" class="btn btn-outline-light text-start">Election Results</a></li>
                             <li class="nav-item"><a href="{% url 'add-election-event' %}" class="btn btn-outline-light text-start">Create Election Event</a></li>
                             <li class="nav-item"><a href="{% url 'add-election' %}" class="btn btn-outline-light text-start">Create Election</a></li>
-                            <li class="nav-item"><a href="{% url 'invite-voter' %}" class="btn btn-outline-light text-start">Invite Voter</a></li>
-                            <li class="nav-item"><a href="{% url 'admin-elections' %}" class="btn btn-outline-light text-start">Admin Elections</a></li>
+                            <li class="nav-item"><a href="{% url 'create-invite' %}" class="btn btn-outline-light text-start">Invite Voter</a></li>
+                            <li class="nav-item"><a href="{% url 'admin-dashboard' %}" class="btn btn-outline-light text-start">Admin Elections Dashboard</a></li>
                             {% endif %}
                             {% endif %}
                         </ul>
