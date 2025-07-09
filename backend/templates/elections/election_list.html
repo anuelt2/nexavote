@@ -26,7 +26,7 @@
                 <td>{{ election.start_time|date:"d-M-Y H:i" }}</td>
                 <td>{{ election.end_time|date:"d-M-Y H:i" }}</td>
                 <td>
-                    <a href="{% url 'election-detail' election.pk %}" class="btn btn-sm btn-primary">View & Vote</a>
+                    <a href="{% url 'vote-page' election.pk %}" class="btn btn-sm btn-primary">View & Vote</a>
                 </td>
             </tr>
             {% endfor %}

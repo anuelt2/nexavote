@@ -5,7 +5,7 @@
 
 {% block content %}
 <div class="container py-5">
-    <h2 class="mb-4">All Elections</h2>
+    <h2 class="mb-5 text-center">Elections Dashboard</h2>
 
     {% for event in events %}
     <div class="mb-5">
@@ -35,7 +35,9 @@
                         {% endif %}
                         <div class="mt-3">
                             <a href="{% url 'add-candidate' election.id %}" class="btn btn-success btn-sm">Add Candidate</a>
-                            <a href="{% url 'election-admin-detail' election.id %}" class="btn btn-outline-primarybtn-sm">Manage</a>
+                            {% comment %}
+                            <!-- <a href="{% url 'election-admin-detail' election.id %}" class="btn btn-outline-primarybtn-sm">Manage</a> -->
+                            {% endcomment %}
                         </div>
                     </div>
                 </div>
