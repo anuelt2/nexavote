@@ -42,13 +42,13 @@ class CastVoteView(generics.CreateAPIView):
     serializer_class = VoteCastSerializer
     permission_classes = [permissions.IsAuthenticated, IsVoter]
     
-    def perform_create(self, serializer):
+    def create(self, request, *args, **kwargs):
         """
-        Create vote and log the action.
+        Create vote and log the action and return vote receipt.
         """
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
         vote = serializer.save()
-        print("=== perform_create called ===")
-        print("Creating audit log for vote ID", vote.id)
         
         # Create audit log
         VoteAuditLog.objects.create(
@@ -58,6 +58,15 @@ class CastVoteView(generics.CreateAPIView):
             details=f"Vote cast for candidate {vote.candidate.first_name} {vote.candidate.last_name}",
             ip_address=self.get_client_ip()
         )
+
+        return Response({
+            "detail": "Vote submitted successfully.",
+            "receipt": {
+                "vote_id": str(vote.id),
+                "timestamp": vote.created_at,
+                "vote_hash": vote.vote_hash
+            }
+        }, status=status.HTTP_201_CREATED)
     
     def get_client_ip(self):
         """

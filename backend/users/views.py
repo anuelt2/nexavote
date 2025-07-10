@@ -20,8 +20,13 @@ from rest_framework.views import APIView
 from invitations.models import Invitation
 from users.forms import VoterRegistrationForm
 from users.models import VoterProfile
-from users.serializers import RegisterViaTokenSerializer, CurrentUserSerializer
-
+from users.serializers import (
+    RegisterViaTokenSerializer,
+    CurrentUserSerializer,
+    PasswordResetConfirmSerializer,
+    PasswordResetRequestSerializer
+)
+from users.utils import send_password_reset_email
 
 User = get_user_model()
 
@@ -259,3 +264,31 @@ class VoterListView(View):
         voters = VoterProfile.objects.select_related('user', 'election_event')
         return render(request, "users/voter_list.html", {"voters": voters})
 
+
+class PasswordResetConfirmAPIView(APIView):
+    """
+    """
+    def post(self, request):
+        serializer = PasswordResetConfirmSerializer(data=request.data)
+        
+        if serializer.is_valid():
+            serializer.save()
+            return Response({'detail': 'Password has been reset successfully.'})
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class PasswordResetRequestAPIView(APIView):
+    """
+    """
+    permission_classes = []
+
+    def post(self, request):
+        serializer = PasswordResetRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        user = serializer.context['user']
+        send_password_reset_email(request, user)
+
+        return Response({
+            "detail": "Password reset email sent successfully."
+        }, status=status.HTTP_200_OK)
