@@ -456,7 +456,15 @@ class CandidateCreateView(View):
     @method_decorator(staff_member_required)
     def get(self, request, election_id):
         """
+        Handle GET requests to display the election event creation form.
+
+        Args:
+            request: The HTTP request object
+
+        Returns:
+            HttpResponse: Rendered HTML template with election event form
         """
+
         election = get_object_or_404(Election, id=election_id)
         form = CandidateForm()
         return render(request, "elections/candidate_create.html", {"form": form, "election": election})
