@@ -5,4 +5,5 @@ __pycache__/
 .env
 staticfiles/
 down-v-rebuild.sh
+.env.prod
 venv
