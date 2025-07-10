@@ -95,5 +95,8 @@ def api_root(request, format=None):
 
 class HomeView(TemplateView):
     """
+    View for rendering the home page.
+
+    This view renders the home.html template.
     """
     template_name = "home.html"

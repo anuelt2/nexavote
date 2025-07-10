@@ -8,6 +8,8 @@ from django.urls import path
 from invitations.views import InvitationCreateView
 
 
+app_name = 'invitations'
+
 urlpatterns =[
     # Admin HTML invite form (to be mounted under /auth/)
     path('create/', InvitationCreateView.as_view(), name='create-invite'),

@@ -21,16 +21,45 @@ User = get_user_model()
 
 class RegisterViaTokenSerializer(serializers.Serializer):
     """
-    Register user via invitation token.
+    Serializer for registering users via invitation token.
+    
+    Handles voter registration through invitation tokens, validating the token
+    and creating both User and VoterProfile instances upon successful registration.
+    
+    Attributes:
+        token (UUIDField): The invitation token UUID
+        first_name (CharField): User's first name (max 50 characters)
+        last_name (CharField): User's last name (max 50 characters)
+        password (CharField): User's password (write-only)
     """
-    token = serializers.UUIDField()
-    first_name = serializers.CharField(max_length=50)
-    last_name = serializers.CharField(max_length=50)
-    password = serializers.CharField(write_only=True)
+    token = serializers.UUIDField(
+        help_text="Valid invitation token UUID for voter registration"
+    )
+    first_name = serializers.CharField(
+        max_length=50,
+        help_text="User's first name"
+    )
+    last_name = serializers.CharField(
+        max_length=50,
+        help_text="User's last name"
+    )
+    password = serializers.CharField(
+        write_only=True,
+        help_text="User's password for account creation"
+    )
 
     def validate_token(self, value):
         """
-        Checks that invitation token is valid and unused.
+        Validate that the invitation token is valid and unused.
+        
+        Args:
+            value (UUID): The invitation token to validate
+            
+        Returns:
+            UUID: The validated token
+            
+        Raises:
+            ValidationError: If token is invalid or already used
         """
         if not Invitation.objects.filter(token=value, is_used=False).exists():
             raise serializers.ValidationError("Invalid or expired token")
@@ -41,10 +70,14 @@ class RegisterViaTokenSerializer(serializers.Serializer):
         Create a new voter user and associated voter profile.
 
         Args:
-            validated_data (dict): Validated registration data
+            validated_data (dict): Validated registration data containing
+                token, first_name, last_name, and password
 
         Returns:
-            User: The newly created voter user
+            User: The newly created voter user instance
+            
+        Raises:
+            ValidationError: If user is already registered for the election event
         """
         token = validated_data["token"]
         invitation = Invitation.objects.get(token=token, is_used=False)
@@ -79,7 +112,7 @@ class RegisterViaTokenSerializer(serializers.Serializer):
             user.save()
         
         if VoterProfile.objects.filter(user=user, election_event=election_event).exists():
-            raise serializers.validationError("You are already registered as a voter for this election event.")
+            raise serializers.ValidationError("You are already registered as a voter for this election event.")
 
         VoterProfile.objects.create(user=user, election_event=invitation.election_event)
 
@@ -92,14 +125,38 @@ class RegisterViaTokenSerializer(serializers.Serializer):
 
 class CurrentUserSerializer(serializers.ModelSerializer):
     """
+    Serializer for current authenticated user information.
+    
+    Provides user details including associated voter profile information
+    for the currently authenticated user.
+    
+    Fields:
+        id: User's unique identifier
+        email: User's email address
+        first_name: User's first name
+        last_name: User's last name
+        is_staff: Boolean indicating staff status
+        voter_profile: Associated voter profile details (if exists)
     """
-    voter_profile = serializers.SerializerMethodField()
+    voter_profile = serializers.SerializerMethodField(
+        help_text="Associated voter profile information including election event details"
+    )
 
     class Meta:
         model = User
         fields = ['id', 'email', 'first_name', 'last_name', 'is_staff', 'voter_profile']
     
-    def get_voter_profile(self,obj):
+    def get_voter_profile(self, obj):
+        """
+        Retrieve voter profile information for the user.
+        
+        Args:
+            obj (User): The user instance
+            
+        Returns:
+            dict or None: Dictionary containing voter profile ID and election event title,
+                         or None if no voter profile exists
+        """
         try:
             profile = obj.voterprofile
             return {
@@ -110,71 +167,41 @@ class CurrentUserSerializer(serializers.ModelSerializer):
             return None
 
 
-# class AdminStaffRegistrationSerializer(serializers.ModelSerializer):
-#     """
-#     Serializer for direct registration of admin and staff users.
-
-#     This serializer allows admins and staff to register directly,
-#     without requiring an invitation token.
-#     """
-#     class Meta:
-#         model = User
-#         fields = ["email", "first_name", "last_name", "password", "role"]
-#         extra_kwargs = {"password": {"write_only": True}, "role": {"required": True}}
-
-#     def validate_role(self, value):
-#         """
-#         Validate that only admin or staff roles can be registered directly.
-
-#         Args:
-#             value (str): The proposed user role
-
-#         Returns:
-#             str: The validated role
-
-#         Raises:
-#             ValidationError: If an invalid role is specified
-#         """
-#         if value not in ["admin", "staff"]:
-#             raise serializers.ValidationError(
-#                 "Only admin and staff roles are allowed."
-#             )
-#         return value
-
-    # def create(self, validated_data):
-    #     """
-    #     Create a new admin or staff user.
-
-    #     Args:
-    #         validated_data (dict): Validated registration data
-
-    #     Returns:
-    #         User: The newly created admin or staff user
-    #     """
-    #     role = validated_data['role']
-    #     is_staff = role in ['admin', 'staff']
-
-    #     user = User.objects.create_user(
-    #         email=validated_data['email'],
-    #         password=validated_data['password'],
-    #         first_name=validated_data['first_name'],
-    #         last_name=validated_data['last_name'],
-    #         role=role,
-    #         is_staff=is_staff,
-    #         is_superuser=(role == 'admin'),
-    #     )
-    #     return user
-
-
 class PasswordResetConfirmSerializer(serializers.Serializer):
     """
+    Serializer for confirming password reset with token validation.
+    
+    Handles the final step of password reset process where users provide
+    the reset token and new password.
+    
+    Attributes:
+        uid (CharField): Base64 encoded user ID
+        token (CharField): Password reset token
+        new_password (CharField): New password to set (write-only)
     """
-    uid = serializers.CharField()
-    token = serializers.CharField()
-    new_password = serializers.CharField(write_only=True)
+    uid = serializers.CharField(
+        help_text="Base64 encoded user ID from password reset email"
+    )
+    token = serializers.CharField(
+        help_text="Password reset token from reset email"
+    )
+    new_password = serializers.CharField(
+        write_only=True,
+        help_text="New password to set for the user account"
+    )
 
     def validate(self, data):
         """
+        Validate the password reset token and user ID.
+        
+        Args:
+            data (dict): Dictionary containing uid, token, and new_password
+            
+        Returns:
+            dict: Validated data
+            
+        Raises:
+            ValidationError: If user ID is invalid or token is expired/invalid
         """
         try:
             uid = force_str(urlsafe_base64_decode(data['uid']))
@@ -190,6 +217,10 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
     
     def save(self):
         """
+        Save the new password for the user.
+        
+        Returns:
+            User: The user instance with updated password
         """
         password = self.validated_data['new_password']
         self.user.set_password(password)
@@ -199,10 +230,31 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
 
 class PasswordResetRequestSerializer(serializers.Serializer):
     """
+    Serializer for requesting password reset via email.
+    
+    Validates the email address and ensures the user exists and is active
+    before initiating the password reset process.
+    
+    Attributes:
+        email (EmailField): Email address of the user requesting password reset
     """
-    email = serializers.EmailField()
+    email = serializers.EmailField(
+        help_text="Email address of the user requesting password reset"
+    )
 
     def validate_email(self, value):
+        """
+        Validate that the email belongs to an active user.
+        
+        Args:
+            value (str): Email address to validate
+            
+        Returns:
+            str: Validated email address
+            
+        Raises:
+            ValidationError: If no user exists with the email or user is inactive
+        """
         try:
             user = User.objects.get(email=value)
         except User.DoesNotExist:
@@ -213,3 +265,4 @@ class PasswordResetRequestSerializer(serializers.Serializer):
         
         self.context['user'] = user
         return value
+
