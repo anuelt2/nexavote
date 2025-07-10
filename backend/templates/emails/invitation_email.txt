@@ -1,12 +1,16 @@
 Hello,
 
-You have been invited to vote in {{ election_title }}.
+You've been invited to register and participate in {{ election_title }}.
 
-Follow the link below to complete your registration.
+To compplete your registration, click the link below:
+
 {{ registration_url }}
 
-This link is unique to you and can only be used once. Do not share!
+This link is unique to you and can only be used once. Please do not share it with anyone.
+
+If you weren't expecting this invitation, feel free to ignore this message.
 
 
-*This is an automatically generated mail. Please do not reply to this address.
-*If you did not expect this invitation, please ignore this email.
+This is an automated email. Please do not reply.
+
+- The NexaVote Team
