@@ -4,9 +4,8 @@ core/views.py
 This module defines the API root view that provides navigation links
 to all available endpoints in the NexaVote Electronic Voting Platform.
 """
-from django.views.generic import TemplateView
-
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
 
@@ -14,6 +13,7 @@ from rest_framework.reverse import reverse
 UUID = "00000000-0000-0000-0000-000000000000"
 
 @api_view(["GET"])
+@permission_classes([AllowAny])     # temporary access to all API endpoints
 def api_root(request, format=None):
     """
     API Root View for NexaVote Electronic Voting Platform.
@@ -40,7 +40,7 @@ def api_root(request, format=None):
         # API Documentation (Swagger / Redoc)
         "docs-swagger":         reverse("schema-swagger-ui", request=request, format=format),
         "docs-redoc":           reverse("schema-redoc", request=request, format=format),
-        "docs-schema-json":     reverse("schema-json", kwargs={"format": ".json"}, request=request),
+        "docs-json":     reverse("schema-json", kwargs={"format": ".json"}, request=request),
 
         # Users
         "user-register":         reverse("users_api:register-via-token", request=request, format=format),
@@ -96,12 +96,3 @@ def api_root(request, format=None):
         "vote-election-statistics":  reverse("votes:election-statistics", kwargs={"election_id": UUID}, request=request, format=format),
         "vote-audit-logs":           reverse("votes:audit-logs", request=request, format=format),
     })
-
-
-class HomeView(TemplateView):
-    """
-    View for rendering the home page.
-
-    This view renders the home.html template.
-    """
-    template_name = "home.html"
