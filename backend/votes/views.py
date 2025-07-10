@@ -30,6 +30,7 @@ from votes.serializers import (
     VoteAuditLogSerializer,
     VoteVerificationSerializer
 )
+from votes.utils import send_vote_receipt_email
 
 
 # ===API Views ===
@@ -58,6 +59,9 @@ class CastVoteView(generics.CreateAPIView):
             details=f"Vote cast for candidate {vote.candidate.first_name} {vote.candidate.last_name}",
             ip_address=self.get_client_ip()
         )
+
+        # Send vote receipt email
+        send_vote_receipt_email(vote)
 
         return Response({
             "detail": "Vote submitted successfully.",

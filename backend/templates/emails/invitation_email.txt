@@ -2,7 +2,7 @@ Hello,
 
 You've been invited to register and participate in {{ election_title }}.
 
-To compplete your registration, click the link below:
+To complete your registration, click the link below:
 
 {{ registration_url }}
 

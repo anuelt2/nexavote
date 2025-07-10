@@ -48,8 +48,8 @@ class RegisterViaTokenSerializer(serializers.Serializer):
         token = validated_data["token"]
         invitation = Invitation.objects.get(token=token, is_used=False)
         password = validated_data["password"]
-        first_name = validated_data["first_name"]
-        last_name = validated_data["last_name"]
+        first_name = validated_data["first_name"].strip()
+        last_name = validated_data["last_name"].strip()
         email = invitation.email
         election_event = invitation.election_event
 
@@ -61,6 +61,17 @@ class RegisterViaTokenSerializer(serializers.Serializer):
                 "role": "voter",
             }
         )
+
+        updated = False
+        if not created:
+            if not user.first_name and first_name:
+                user.first_name = first_name
+                updated = True
+            if not user.last_name and last_name:
+                user.last_name = last_name
+                updated = True
+            if updated:
+                user.save()
 
         if created:
             user.set_password(password)
