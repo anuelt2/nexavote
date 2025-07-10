@@ -15,7 +15,7 @@ from drf_yasg.views import get_schema_view  # type: ignore
 from drf_yasg import openapi    # type: ignore
 from rest_framework import permissions
 
-from core.views import api_root, HomeView
+from core.views import api_root
 
 
 schema_view = get_schema_view(
@@ -40,12 +40,12 @@ urlpatterns = [
     path('auth/invitation/', include('invitations.urls')),
 
     # Other Template Views
-    path('', HomeView.as_view(), name='home'),
     path('', include('users.urls')),
     path('events/', include('election_events.urls')),
     path('', include('elections.urls')),
 
      # API Root
+    path('', api_root, name='api-root'),
     path('api/', api_root, name='api-root'),
 
     # API Authentication (DRF Browsable API login/logout)
