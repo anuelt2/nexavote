@@ -1,8 +1,8 @@
 services:
   web:
     build: .
-    container_name: nexavote_web  # Explicit container name
-    command: python manage.py runserver 0.0.0.0:8000
+    container_name: nexavote_web # Explicit container name
+    command: gunicorn config.wsgi:application --bind 0.0.0.0:8000
     volumes:
       - .:/app
     ports:
@@ -13,6 +13,7 @@ services:
       - .env
     networks:
       - nexavote_network
+    restart: always
 
   db:
     image: postgres:15
@@ -25,6 +26,7 @@ services:
       - POSTGRES_PASSWORD=nexavotepass
     networks:
       - nexavote_network
+    restart: always
 
 volumes:
   postgres_data:
