@@ -37,6 +37,11 @@ def api_root(request, format=None):
         # API Root
         "api-root":         reverse("api-root", request=request, format=format),
 
+        # API Documentation (Swagger / Redoc)
+        "docs-swagger":         reverse("schema-swagger-ui", request=request, format=format),
+        "docs-redoc":           reverse("schema-redoc", request=request, format=format),
+        "docs-schema-json":     reverse("schema-json", kwargs={"format": ".json"}, request=request),
+
         # Users
         "user-register":         reverse("users_api:register-via-token", request=request, format=format),
         "user-login":            reverse("users_api:login", request=request, format=format),
