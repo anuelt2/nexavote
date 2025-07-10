@@ -11,15 +11,17 @@ from invitations.views import (
     InvitationDetailView,
     InvitationsByEventView,
     InvitationMarkUsedView,
-    InvitationByTokenView
+    InvitationByTokenView,
+    BulkInviteUploadAPIView
 )
 
 urlpatterns =[
-    # API view (to be mounted under /api/invitations/)
+    # API view
     path('create/', InvitationCreateAPIView.as_view(), name='invitation-create'),
     path('list/', InvitationListCreateView.as_view(), name='invitation-list'),
     path('<uuid:pk>/', InvitationDetailView.as_view(), name='invitation-detail'),
     path('event/<uuid:event_id>/', InvitationsByEventView.as_view(), name='invitation-by-event'),
     path('<uuid:pk>/mark-used/', InvitationMarkUsedView.as_view(), name='invitation-mark-used'),
     path('detail-by-token/<uuid:token>/', InvitationByTokenView.as_view(), name='invitation-by-token'),
+    path('bulk-upload/', BulkInviteUploadAPIView.as_view(), name='invitation-bulk-upload'),
 ]

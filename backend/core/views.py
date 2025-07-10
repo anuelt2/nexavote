@@ -42,6 +42,8 @@ def api_root(request, format=None):
         "user-login":            reverse("users_api:login", request=request, format=format),
         "user-logout":           reverse("users_api:logout", request=request, format=format),
         "user-current-user":     reverse("users_api:current-user", request=request, format=format),
+        "user-password-reset-confirm":     reverse("users_api:password-reset-confirm", request=request, format=format),
+        "user-password-reset-request":     reverse("users_api:password-reset-request", request=request, format=format),
         
         # Invitations
         "invitation-create":    reverse("invitation-create", request=request, format=format),
@@ -50,6 +52,7 @@ def api_root(request, format=None):
         "invitation-by-event":  reverse("invitation-by-event", kwargs={"event_id": UUID}, request=request, format=format),
         "invitation-mark-used": reverse("invitation-mark-used", kwargs={"pk": UUID}, request=request, format=format),
         "invitation-by-token":  reverse("invitation-by-token", kwargs={"token": UUID}, request=request, format=format),
+        "invitation-bulk-upload":    reverse("invitation-bulk-upload", request=request, format=format),
 
         # Election Events
         "event-events":     reverse("events_api:event-list", request=request, format=format),

@@ -54,3 +54,17 @@ class InvitationListSerializer(serializers.ModelSerializer):
             'created_at'
         ]
         read_only_fields = ['token', 'is_used', 'created_at']
+
+
+class CSVUploadSerializer(serializers.Serializer):
+    """
+    Serializer for uploading csv files with emails for bulk
+    voter registration email sending.
+    """
+    file = serializers.FileField()
+    election_event_id = serializers.UUIDField()
+
+    def validate_file(self, file):
+        if not file.name.endswith('.csv'):
+            raise serializers.ValidationError('Only CSV files are allowed.')
+        return file

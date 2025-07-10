@@ -4,6 +4,9 @@ Django views for invitation management.
 This module contains view classes for creating and managing voter invitations
 via both API and HTML interfaces.
 """
+import csv
+from io import TextIOWrapper
+
 from django.contrib import messages
 from django.contrib.admin.views.decorators import staff_member_required
 from django.shortcuts import render, redirect, get_object_or_404
@@ -14,10 +17,16 @@ from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from election_events.models import ElectionEvent
 from invitations.forms import InvitationForm
 from invitations.models import Invitation
-from invitations.serializers import InvitationCreateSerializer, InvitationListSerializer
+from invitations.serializers import (
+    InvitationCreateSerializer,
+    InvitationListSerializer,
+    CSVUploadSerializer
+)
 from invitations.utils import send_invite_email
+from users.permissions import IsElectionAdmin
 
 
 # === API Views ===
@@ -147,3 +156,56 @@ class InvitationCreateView(View):
             messages.error(request, "Error with submission. Please check form and try again.")
             empty_form = InvitationForm()
             return render(request, "invitations/invite.html", {"form": form})
+
+
+class BulkInviteUploadAPIView(generics.GenericAPIView):
+    """
+    """
+    serializer_class = CSVUploadSerializer
+    permission_classes = [permissions.IsAuthenticated, IsElectionAdmin]
+
+    def post(self, request):
+        """
+        """
+        serializer = self.get_serializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        file = serializer.validated_data['file']
+        election_event_id = serializer.validated_data['election_event_id']
+
+        try:
+            election_event = ElectionEvent.objects.get(id=election_event_id)
+        except ElectionEvent.DoesNotExist:
+            return Response({"election_event_id": "Invalid election event ID."}, status=status.HTTP_400_BAD_REQUEST)
+
+        csv_file = TextIOWrapper(file.file, encoding='utf-8')
+        reader = csv.reader(csv_file)
+
+        emails = set()
+
+        for row in reader:
+            if row:
+                email = row[0].strip().lower()
+                if email:
+                    emails.add(email)
+        
+        sent = []
+        skipped = []
+
+        for email in emails:
+            if Invitation.objects.filter(email=email, election_event=election_event).exists():
+                skipped.append(email)
+                continue
+
+            invitation = Invitation.objects.create(email=email, election_event=election_event)
+            send_invite_email(invitation)
+            sent.append(email)
+
+        return Response({
+            "sent": sent,
+            "skipped": skipped,
+            "sent_count": len(sent),
+            "skipped_count": len(skipped),
+            "election_event": election_event_id
+        }, status=status.HTTP_201_CREATED)
