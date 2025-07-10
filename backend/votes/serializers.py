@@ -1,12 +1,15 @@
 """
 votes/serializers.py
+
 Serializers for the Vote and VoteAuditLog models.
 """
-from rest_framework import serializers
 from django.core.exceptions import ValidationError as DjangoValidationError
-from .models import Vote, VoteAuditLog
+
+from rest_framework import serializers
+
 from elections.models import Candidate
 from users.models import VoterProfile
+from votes.models import Vote, VoteAuditLog
 
 
 class VoteCastSerializer(serializers.ModelSerializer):
@@ -136,6 +139,15 @@ class VoterParticipationSerializer(serializers.Serializer):
     participation_rate = serializers.FloatField()
     votes_per_election = serializers.DictField()
     total_votes_cast = serializers.IntegerField()
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+
+        rate = data.get('participation_rate')
+        if rate is not None:
+            data['participation_rate'] = round(rate, 2)
+        
+        return data
 
 
 class VoteAuditLogSerializer(serializers.ModelSerializer):

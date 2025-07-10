@@ -1,14 +1,27 @@
 """
+elections/serializers.py
+
+This module defines Django REST Framework serializers for the elections app.
 """
-from django.core.exceptions import ValidationError
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
+
 from elections.models import Election, Candidate
 
 
 class ElectionSerializer(serializers.ModelSerializer):
     """
     Serializer for Election model.
+    
+    This serializer handles the conversion between Election model instances
+    and JSON representation for API responses and requests.
+    
+    Meta:
+        model: The Election model class
+        fields: List of fields to include in serialization
     """
+    election_event_title = serializers.CharField(source='election_event.title', read_only=True)
+
     class Meta:
         model = Election
         fields = [
@@ -18,7 +31,8 @@ class ElectionSerializer(serializers.ModelSerializer):
             'start_time',
             'end_time',
             'is_active',
-            'election_event'
+            'election_event',
+            'election_event_title'
         ]
     
     def validate(self, attrs):
@@ -57,14 +71,51 @@ class ElectionSerializer(serializers.ModelSerializer):
 class CandidateSerializer(serializers.ModelSerializer):
     """
     Serializer for Candidate model.
+    
+    This serializer handles the conversion between Candidate model instances
+    and JSON representation for API responses and requests.
+
+    Adds full_name field, validates that a user can only be a candidate
+    once per election.
+    
+    Meta:
+        model: The Candidate model class
+        fields: List of fields to include in serialization
     """
+    full_name = serializers.SerializerMethodField()
+
     class Meta:
         model = Candidate
         fields = [
             'id',
             'first_name',
             'last_name',
+            'full_name',
             'bio',
-            'election',
-            'user'
+            'election'
         ]
+    
+    def get_full_name(self, obj):
+        """
+        Creates and returns fullname from first name and last name fields.
+        """
+        return f"{obj.first_name} {obj.last_name}"
+    
+    def validate(self, data):
+        """
+        Ensures a user can be a candidate once per election.
+        """
+        user = data.get('user')
+        election = data.get('election')
+
+        if self.instance:
+            if self.instance.user == user and self.instance.election == election:
+                return data
+        
+        if Candidate.objects.filter(user=user, election=election).exists():
+            raise serializers.ValidationError(
+                "This user is already a candidate in this election."
+            )
+        
+        return data
+

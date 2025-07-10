@@ -1,17 +1,37 @@
 """
+Django views for invitation management.
+
+This module contains view classes for creating and managing voter invitations
+via both API and HTML interfaces.
 """
-from django.views import View
+import csv
+from io import TextIOWrapper
+
 from django.contrib import messages
 from django.contrib.admin.views.decorators import staff_member_required
 from django.shortcuts import render, redirect, get_object_or_404
 from django.utils.decorators import method_decorator
+from django.views import View
 
 from rest_framework import generics, permissions, status
+<<<<<<< HEAD
 
 from .forms import InvitationForm
+=======
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from election_events.models import ElectionEvent
+from invitations.forms import InvitationForm
+>>>>>>> 4687d895cc677049e99de1fe092309922a2483b8
 from invitations.models import Invitation
-from invitations.serializers import InvitationCreateSerializer
+from invitations.serializers import (
+    InvitationCreateSerializer,
+    InvitationListSerializer,
+    CSVUploadSerializer
+)
 from invitations.utils import send_invite_email
+from users.permissions import IsElectionAdmin
 
 from django.http import JsonResponse
 from rest_framework.views import APIView
@@ -22,49 +42,125 @@ from elections.models import ElectionEvent
 from users.permissions import IsElectionAdmin
 
 
+# === API Views ===
+
 class InvitationCreateAPIView(generics.CreateAPIView):
     """
+    API view for creating voter invitations.
+    
+    Allows admin users to create invitations via API endpoint.
     """
     queryset = Invitation.objects.all()
     serializer_class = InvitationCreateSerializer
     permission_classes = [permissions.IsAdminUser]
-
+    
     def perform_create(self, serializer):
         """
+        Handle invitation creation and send email notification.
+        
+        Args:
+            serializer: The validated serializer instance
         """
         invitation = serializer.save()
         send_invite_email(invitation, use_api=True)
 
 
+class InvitationListCreateView(generics.ListCreateAPIView):
+    """
+    """
+    queryset = Invitation.objects.all()
+    serializer_class = InvitationListSerializer
+    permission_classes = [permissions.IsAdminUser]
+
+
+class InvitationDetailView(generics.RetrieveAPIView):
+    """
+    """
+    queryset = Invitation.objects.all()
+    serializer_class = InvitationListSerializer
+    permission_classes = [permissions.IsAdminUser]
+
+
+class InvitationsByEventView(generics.ListAPIView):
+    """
+    """
+    serializer_class = InvitationListSerializer
+
+    def get_queryset(self):
+        event_id = self.kwargs['event_id']
+        return Invitation.objects.filter(election_event_id=event_id)
+
+
+class InvitationMarkUsedView(APIView):
+    """
+    """
+    def patch(self, request, pk):
+        invitation = get_object_or_404(Invitation, pk=pk)
+        if invitation.is_used:
+            return Response({'detail': 'Invitation already marked as used.'}, status=status.HTTP_404_BAD_REQUEST)
+        
+        invitation.is_used = True
+        invitation.save()
+        return Response({'detail': 'Invitation marked as used.'}, status=status.HTTP_200_OK)
+
+
+class InvitationByTokenView(generics.RetrieveAPIView):
+    """
+    Get and verify inivitaiton details via token before registration proceeds.
+    """
+    serializer_class = InvitationListSerializer
+    lookup_field = 'token'
+    queryset = Invitation.objects.all()
+
+
+# === Template Views ===
+
+@method_decorator(staff_member_required, name='dispatch')
 class InvitationCreateView(View):
     """
+    HTML view for creating voter invitations.
+    
+    Provides form-based interface for staff members to create invitations.
     """
-    @method_decorator(staff_member_required)
     def get(self, request):
         """
+        Display invitation creation form.
+        
+        Args:
+            request: The HTTP request object
+            
+        Returns:
+            HttpResponse: Invitation form page
         """
         form = InvitationForm()
         return render(request, "invitations/invite.html", {"form": form})
     
-    @method_decorator(staff_member_required)
     def post(self, request):
         """
+        Process invitation creation form submission.
+        
+        Args:
+            request: The HTTP request object
+            
+        Returns:
+            HttpResponse: Success redirect or form with errors
         """
         form = InvitationForm(request.POST)
+        
         if form.is_valid():
             email = form.cleaned_data['email']
             election_event = form.cleaned_data['election_event']
-
+            
             existing_invitation = Invitation.objects.filter(
                 email=email,
                 election_event=election_event,
                 is_used=False
             ).first()
-
+            
             if existing_invitation:
                 messages.warning(request, f"An unused invitation has already been sent to {email} for this election.")
-                return render(request, "invitations/invite.html"), {"form": form}
-
+                return render(request, "invitations/invite.html", {"form": form})
+            
             invitation = form.save(commit=False)
             invitation.save()
             send_invite_email(invitation, use_api=False)
@@ -72,124 +168,57 @@ class InvitationCreateView(View):
         else:
             messages.error(request, "Error with submission. Please check form and try again.")
             empty_form = InvitationForm()
-            return render(request, "invitations/invite.html", {"form": empty_form})
+            return render(request, "invitations/invite.html", {"form": form})
 
 
-@method_decorator(staff_member_required, name='dispatch')
-class CSVUploadView(View):
+class BulkInviteUploadAPIView(generics.GenericAPIView):
     """
-    View for uploading CSV files with voter information.
     """
-    template_name = 'invitations/csv_upload.html'
-    
-    def get(self, request, event_id):
-        """
-        Display CSV upload form.
-        """
-        election_event = get_object_or_404(ElectionEvent, id=event_id)
-        form = CSVUploadForm()
-        
-        return render(request, self.template_name, {
-            'form': form,
-            'election_event': election_event,
-        })
-    
-    def post(self, request, event_id):
-        """
-        Process CSV upload and create invitations.
-        """
-        election_event = get_object_or_404(ElectionEvent, id=event_id)
-        form = CSVUploadForm(request.POST, request.FILES)
-        
-        if form.is_valid():
-            csv_file = form.cleaned_data['csv_file']
-            service = CSVInvitationService(request)
-            
-            try:
-                results = service.process_csv_upload(csv_file, election_event)
-                
-                # Add success message
-                messages.success(
-                    request,
-                    f"CSV processed successfully! "
-                    f"Invitations sent: {results['successful_invitations']}, "
-                    f"Failed: {results['failed_invitations']}, "
-                    f"Duplicates: {results['duplicate_emails']}"
-                )
-                
-                # Store results in session for display
-                request.session['csv_results'] = results
-                
-                return redirect('invitations:csv-results', event_id=event_id)
-                
-            except Exception as e:
-                messages.error(request, f"Error processing CSV: {str(e)}")
-        
-        return render(request, self.template_name, {
-            'form': form,
-            'election_event': election_event,
-        })
-
-
-@method_decorator(staff_member_required, name='dispatch')
-class CSVResultsView(View):
-    """
-    View for displaying CSV upload results.
-    """
-    template_name = 'invitations/csv_results.html'
-    
-    def get(self, request, event_id):
-        """
-        Display CSV upload results.
-        """
-        election_event = get_object_or_404(ElectionEvent, id=event_id)
-        results = request.session.get('csv_results', {})
-        
-        # Clear results from session
-        if 'csv_results' in request.session:
-            del request.session['csv_results']
-        
-        return render(request, self.template_name, {
-            'election_event': election_event,
-            'results': results,
-        })
-
-
-class CSVUploadAPIView(APIView):
-    """
-    API endpoint for uploading CSV files.
-    """
+    serializer_class = CSVUploadSerializer
     permission_classes = [permissions.IsAuthenticated, IsElectionAdmin]
-    
-    def post(self, request, event_id):
+
+    def post(self, request):
         """
-        Process CSV upload via API.
         """
-        election_event = get_object_or_404(ElectionEvent, id=event_id)
+        serializer = self.get_serializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
-        if 'csv_file' not in request.FILES:
-            return Response(
-                {'error': 'No CSV file provided'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        file = serializer.validated_data['file']
+        election_event_id = serializer.validated_data['election_event_id']
+
+        try:
+            election_event = ElectionEvent.objects.get(id=election_event_id)
+        except ElectionEvent.DoesNotExist:
+            return Response({"election_event_id": "Invalid election event ID."}, status=status.HTTP_400_BAD_REQUEST)
+
+        csv_file = TextIOWrapper(file.file, encoding='utf-8')
+        reader = csv.reader(csv_file)
+
+        emails = set()
+
+        for row in reader:
+            if row:
+                email = row[0].strip().lower()
+                if email:
+                    emails.add(email)
         
-        csv_file = request.FILES['csv_file']
-        form = CSVUploadForm({'csv_file': csv_file})
-        
-        if form.is_valid():
-            service = CSVInvitationService(request)
-            
-            try:
-                results = service.process_csv_upload(csv_file, election_event)
-                return Response(results, status=status.HTTP_200_OK)
-                
-            except Exception as e:
-                return Response(
-                    {'error': str(e)},
-                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
-                )
-        
-        return Response(
-            {'error': 'Invalid CSV file', 'details': form.errors},
-            status=status.HTTP_400_BAD_REQUEST
-        )
+        sent = []
+        skipped = []
+
+        for email in emails:
+            if Invitation.objects.filter(email=email, election_event=election_event).exists():
+                skipped.append(email)
+                continue
+
+            invitation = Invitation.objects.create(email=email, election_event=election_event)
+            send_invite_email(invitation)
+            sent.append(email)
+
+        return Response({
+            "sent": sent,
+            "skipped": skipped,
+            "sent_count": len(sent),
+            "skipped_count": len(skipped),
+            "election_event": election_event_id
+        }, status=status.HTTP_201_CREATED)

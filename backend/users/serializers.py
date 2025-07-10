@@ -1,7 +1,16 @@
 """
+Django REST Framework serializers for user registration.
+
+This module contains serializers for handling user registration via invitation tokens
+and direct admin/staff registration.
 """
-from rest_framework import serializers
 from django.contrib.auth import get_user_model
+from django.contrib.auth.password_validation import validate_password
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.encoding import force_str
+from django.utils.http import urlsafe_base64_decode
+
+from rest_framework import serializers
 
 from invitations.models import Invitation
 from users.models import User, VoterProfile
@@ -39,8 +48,8 @@ class RegisterViaTokenSerializer(serializers.Serializer):
         token = validated_data["token"]
         invitation = Invitation.objects.get(token=token, is_used=False)
         password = validated_data["password"]
-        first_name = validated_data["first_name"]
-        last_name = validated_data["last_name"]
+        first_name = validated_data["first_name"].strip()
+        last_name = validated_data["last_name"].strip()
         email = invitation.email
         election_event = invitation.election_event
 
@@ -52,6 +61,17 @@ class RegisterViaTokenSerializer(serializers.Serializer):
                 "role": "voter",
             }
         )
+
+        updated = False
+        if not created:
+            if not user.first_name and first_name:
+                user.first_name = first_name
+                updated = True
+            if not user.last_name and last_name:
+                user.last_name = last_name
+                updated = True
+            if updated:
+                user.save()
 
         if created:
             user.set_password(password)
@@ -68,53 +88,126 @@ class RegisterViaTokenSerializer(serializers.Serializer):
         return user
 
 
-class AdminStaffRegistrationSerializer(serializers.ModelSerializer):
+class CurrentUserSerializer(serializers.ModelSerializer):
     """
-    Serializer for direct registration of admin and staff users.
+    """
+    voter_profile = serializers.SerializerMethodField()
 
-    This serializer allows admins and staff to register directly,
-    without requiring an invitation token.
-    """
     class Meta:
         model = User
-        fields = ["email", "first_name", "last_name", "password", "role"]
-        extra_kwargs = {"password": {"write_only": True}, "role": {"required": True}}
+        fields = ['id', 'email', 'first_name', 'last_name', 'is_staff', 'voter_profile']
+    
+    def get_voter_profile(self,obj):
+        try:
+            profile = obj.voterprofile
+            return {
+                'id': str(profile.id),
+                'election_event': profile.election_event.title
+            }
+        except VoterProfile.DoesNotExist:
+            return None
 
-    def validate_role(self, value):
+
+# class AdminStaffRegistrationSerializer(serializers.ModelSerializer):
+#     """
+#     Serializer for direct registration of admin and staff users.
+
+#     This serializer allows admins and staff to register directly,
+#     without requiring an invitation token.
+#     """
+#     class Meta:
+#         model = User
+#         fields = ["email", "first_name", "last_name", "password", "role"]
+#         extra_kwargs = {"password": {"write_only": True}, "role": {"required": True}}
+
+#     def validate_role(self, value):
+#         """
+#         Validate that only admin or staff roles can be registered directly.
+
+#         Args:
+#             value (str): The proposed user role
+
+#         Returns:
+#             str: The validated role
+
+#         Raises:
+#             ValidationError: If an invalid role is specified
+#         """
+#         if value not in ["admin", "staff"]:
+#             raise serializers.ValidationError(
+#                 "Only admin and staff roles are allowed."
+#             )
+#         return value
+
+    # def create(self, validated_data):
+    #     """
+    #     Create a new admin or staff user.
+
+    #     Args:
+    #         validated_data (dict): Validated registration data
+
+    #     Returns:
+    #         User: The newly created admin or staff user
+    #     """
+    #     role = validated_data['role']
+    #     is_staff = role in ['admin', 'staff']
+
+    #     user = User.objects.create_user(
+    #         email=validated_data['email'],
+    #         password=validated_data['password'],
+    #         first_name=validated_data['first_name'],
+    #         last_name=validated_data['last_name'],
+    #         role=role,
+    #         is_staff=is_staff,
+    #         is_superuser=(role == 'admin'),
+    #     )
+    #     return user
+
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    """
+    """
+    uid = serializers.CharField()
+    token = serializers.CharField()
+    new_password = serializers.CharField(write_only=True)
+
+    def validate(self, data):
         """
-        Validate that only admin or staff roles can be registered directly.
-
-        Args:
-            value (str): The proposed user role
-
-        Returns:
-            str: The validated role
-
-        Raises:
-            ValidationError: If an invalid role is specified
         """
-        if value not in ["admin", "staff"]:
-            raise serializers.ValidationError(
-                "Only admin and staff can register directly."
-            )
+        try:
+            uid = force_str(urlsafe_base64_decode(data['uid']))
+            self.user = User.objects.get(pk=uid)
+        except (User.DoesNotExist, ValueError, TypeError):
+            raise serializers.ValidationError({'uid': 'Invalid user ID'})
+        
+        if not default_token_generator.check_token(self.user, data['token']):
+            raise serializers.ValidationError({'token': 'Invalid or expired token'})
+        
+        validate_password(data['new_password'], self.user)
+        return data
+    
+    def save(self):
+        """
+        """
+        password = self.validated_data['new_password']
+        self.user.set_password(password)
+        self.user.save()
+        return self.user
+
+
+class PasswordResetRequestSerializer(serializers.Serializer):
+    """
+    """
+    email = serializers.EmailField()
+
+    def validate_email(self, value):
+        try:
+            user = User.objects.get(email=value)
+        except User.DoesNotExist:
+            raise serializers.ValidationError("No user with this email exists.")
+        
+        if not user.is_active:
+            raise serializers.ValidationError("User account is inactive.")
+        
+        self.context['user'] = user
         return value
-
-    def create(self, validated_data):
-        """
-        Create a new admin or staff user.
-
-        Args:
-            validated_data (dict): Validated registration data
-
-        Returns:
-            User: The newly created admin or staff user
-        """
-        user = User.objects.create_user(
-            email=validated_data["email"],
-            password=validated_data["password"],
-            first_name=validated_data["first_name"],
-            last_name=validated_data["last_name"],
-            role=validated_data["role"],
-            is_staff=validated_data["role"] == "staff",
-        )
-        return user
