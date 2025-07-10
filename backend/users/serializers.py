@@ -14,6 +14,7 @@ from rest_framework import serializers
 
 from invitations.models import Invitation
 from users.models import User, VoterProfile
+from users.utils import send_voter_registration_email
 
 User = get_user_model()
 
@@ -85,6 +86,7 @@ class RegisterViaTokenSerializer(serializers.Serializer):
         invitation.is_used = True
         invitation.save()
 
+        send_voter_registration_email(user, election_event)
         return user
 
 

@@ -32,3 +32,31 @@ def send_password_reset_email(request, user):
             [user.email],
             fail_silently=False,
         )
+
+def send_voter_registration_email(user, election_event):
+        """
+        Sends registration confirmation email to voter.
+        """
+        subject = "Welcome to Nexavote - Registration Successful"
+
+        message = f"""
+Hello {user.first_name},
+
+You have successfully registered as a voter for the election event:
+{election_event.title}.
+
+You can now log in and particpate in any elections available within this event.
+
+If you did not request this registration, please contact our support team immediately.
+
+Thank you,
+The NexaVote Team
+""".strip()
+        
+        send_mail(
+                subject,
+                message,
+                settings.DEFAULT_FROM_EMAIL,
+                [user.email],
+                fail_silently=False,
+        )
